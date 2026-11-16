@@ -1,0 +1,23 @@
+# Environment and secrets
+.env
+*.env
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Private candidate notes and logs (not committed)
+_private/
+
+# Local reports
+reports/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
