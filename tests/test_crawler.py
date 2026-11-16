@@ -151,3 +151,31 @@ async def test_crawler_not_html():
     with pytest.raises(CrawlError) as exc_info:
         await crawler.crawl("https://example.com")
     assert exc_info.value.code == "NOT_HTML"
+
+
+@pytest.mark.asyncio
+async def test_crawler_html_content_type_accepted_and_preserved():
+    """Regression test: verify HTML with Content-Type: text/html is accepted and preserved."""
+    def handler(request: httpx.Request):
+        url = str(request.url)
+        if url.endswith("/robots.txt"):
+            return httpx.Response(404)
+        if url.endswith("/llms.txt"):
+            return httpx.Response(404)
+        return httpx.Response(
+            200,
+            text="<!DOCTYPE html><html><head><title>Test</title></head><body>Hello</body></html>",
+            headers={"Content-Type": "text/html; charset=UTF-8", "X-Custom-Header": "PreservedValue"},
+        )
+
+    crawler = Crawler(allow_private=True, transport=httpx.MockTransport(handler))
+    result = await crawler.crawl("https://example.com")
+
+    assert len(result.pages) == 1
+    page = result.pages[0]
+    assert page.url == "https://example.com"
+    assert page.status_code == 200
+    assert "content-type" in page.headers
+    assert "text/html" in page.headers["content-type"]
+    assert page.headers["content-type"] == "text/html; charset=UTF-8"
+    assert page.headers.get("x-custom-header") == "PreservedValue"

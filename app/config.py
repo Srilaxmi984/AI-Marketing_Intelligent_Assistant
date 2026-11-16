@@ -60,7 +60,8 @@ class Settings(BaseSettings):
 
     @property
     def user_agent(self) -> str:
-        return f"SEOAuditBot/1.0 (+student assignment; contact: {self.contact_email})"
+        # DECISION: User-Agent follows standard RFC 9110 product/comment syntax (+mailto:URI) so edge proxies and WAFs parse it cleanly without dropping response headers.
+        return f"SEOAuditBot/1.0 (+mailto:{self.contact_email})"
 
 
 settings = Settings()
