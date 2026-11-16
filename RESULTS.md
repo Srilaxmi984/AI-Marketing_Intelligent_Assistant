@@ -18,159 +18,85 @@
 
 ---
 
-## 2. Real Execution Output: HubSpot Audit (CLI)
+## 2. SEO Audit Report: https://www.hubspot.com
 
-Command executed:
-```bash
-python cli.py https://www.hubspot.com --max-pages 25
-```
+- **Audit ID**: `43b34647-9c2a-4f24-b23e-4baca52b345d`
+- **Started At**: 2026-11-16T19:27:58.130557+00:00
+- **Finished At**: 2026-11-16T19:29:17.276889+00:00
+- **Pages Crawled**: 25 (discovered: 262)
+- **Max Pages Cap**: 25
+- **Crawl Duration**: 20.92 seconds
+- **Time Budget Truncated**: False
 
-```text
-INFO: Starting audit for https://www.hubspot.com (max pages: 25)...
-INFO: HTTP Request: GET https://www.hubspot.com/robots.txt "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/llms.txt "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/aeo-grader "HTTP/1.1 301 Moved Permanently"
-INFO: HTTP Request: GET https://www.hubspot.com/ai-search-grader "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/aeo-sensor "HTTP/1.1 301 Moved Permanently"
-INFO: HTTP Request: GET https://www.hubspot.com/ai-search-sensor "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/careers "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/case-studies "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/case-studies/angel-city "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/case-studies/unipart "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/case-studies/youth-on-course "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/claude "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/company/board-of-directors "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/company/contact "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/company/management "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/comparisons "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/email-signature-generator "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/free-business-tools "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/hubspot-user-groups "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/inbound-marketing "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/loop-marketing "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/make-my-persona "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/new "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/our-story "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/partners "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/partners/affiliates "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/partners/app "HTTP/1.1 301 Moved Permanently"
-INFO: HTTP Request: GET https://www.hubspot.com/partners/technology "HTTP/1.1 200 OK"
-INFO: HTTP Request: GET https://www.hubspot.com/partners/solutions "HTTP/1.1 200 OK"
-INFO: Crawled 25 pages in 25.49s.
-INFO: Checking internal links...
-[262 internal links verified via asynchronous HEAD/GET checks]
-INFO: Evaluating 5 SEO metrics...
+### Overall Health Score
 
-======================================================================
-  AI MARKETING INTELLIGENCE ASSISTANT - SEO AUDIT REPORT
-======================================================================
-Target URL:        https://www.hubspot.com
-Audit ID:          1d73a5a1-b721-48b6-87da-997bded4e303
-Pages Crawled:     25 (discovered: 262)
-Crawl Duration:    25.49s
-----------------------------------------------------------------------
-OVERALL HEALTH SCORE: 74.4 / 100
-Scoring Formula:     title_meta (20.0% * 28.0) + broken_links (15.0% * 100.0) + indexability_canonical (25.0% * 100.0) + ai_crawler_access (20.0% * 100.0) + structured_data (20.0% * 44.0) = 74.4
-----------------------------------------------------------------------
-THE FIVE CORE METRICS:
- 1. Title and Meta Description          [FAIL]   Score:  28.0% (7/25)
-    Summary: 7 of 25 pages (28.0%) meet title (30-60 chars) and meta description (70-160 chars) guidelines.
- 2. Broken Internal Links               [PASS]   Score: 100.0% (262/262)
-    Summary: Found 0 broken links out of 262 internal links checked (0 unreachable).
- 3. Indexability and Canonicalization   [PASS]   Score: 100.0% (25/25)
-    Summary: 25 of 25 pages (100.0%) are indexable and declare valid canonical tags.
- 4. AI Search Crawler Access            [PASS]   Score: 100.0% (6/6)
-    Summary: 6 of 6 AI search crawlers (100.0%) are permitted by robots.txt (/llms.txt detected).
- 5. Structured Data (Schema.org)        [FAIL]   Score:  44.0% (11/25)
-    Summary: 11 of 25 pages (44.0%) contain valid JSON-LD markup (9 unique schema types detected across the site).
-----------------------------------------------------------------------
-ACTION LIST FOR THIS WEEK (Source: FALLBACK):
- (Note: No GEMINI_API_KEY configured)
- [#1] Optimize Page Titles and Meta Descriptions (title_meta)
-      Recommendation: Review and update pages with short or missing titles (target 30-60 characters) and meta descriptions (target 70-160 characters).
-      Impact:         Improves organic search snippet presentation and click-through rates on search results pages.
-      Evidence:       Score: 28.0% (7/25 passed).
- [#2] Deploy Schema.org JSON-LD Structured Data (structured_data)
-      Recommendation: Add valid JSON-LD markup (e.g. Organization, Product, WebSite) across crawled pages.
-      Impact:         Enables rich search snippets and improves entity recognition across modern search engines.
-      Evidence:       Score: 44.0% (11/25 passed).
-======================================================================
+**Score**: `74.4 / 100`
 
-Saved complete JSON report to: reports\www.hubspot.com.json
-```
+**Scoring Formula**:
+> `title_meta (20.0% * 28.0) + broken_links (15.0% * 100.0) + indexability_canonical (25.0% * 100.0) + ai_crawler_access (20.0% * 100.0) + structured_data (20.0% * 44.0) = 74.4`
 
----
-
-## 3. SEO Metric Performance Breakdown
+### Core SEO Metrics
 
 | Metric | Status | Weight | Score | Passed / Total | Pass Rule |
 |---|---|---|---|---|---|
-| **Title and Meta Description** | `FAIL` | 20.0% | 28.0% | 7 / 25 | Title between 30 and 60 characters; meta description between 70 and 160 characters. |
-| **Broken Internal Links** | `PASS` | 15.0% | 100.0% | 262 / 262 | Zero broken links (final HTTP 4xx or 5xx). |
-| **Indexability and Canonicalization** | `PASS` | 25.0% | 100.0% | 25 / 25 | Page is indexable (no noindex/none directives) and declares a valid canonical URL on the same site. |
-| **AI Search Crawler Access** | `PASS` | 20.0% | 100.0% | 6 / 6 | All 6 designated AI search crawlers permitted in robots.txt. |
-| **Structured Data (Schema.org)** | `FAIL` | 20.0% | 44.0% | 11 / 25 | Page contains at least one valid JSON-LD block with recognized Schema.org types. |
+| **Title and Meta Description** | `FAIL` | 20.0% | 28.0% | 7 / 25 | Title between 30 and 60 characters inclusive; meta description between 70 and 160 characters inclusive. |
+| **Broken Internal Links** | `PASS` | 15.0% | 100.0% | 262 / 262 | Zero broken links. |
+| **Indexability and Canonicalization** | `PASS` | 25.0% | 100.0% | 25 / 25 | A page passes only if it is indexable and declares a valid canonical URL on the same site. |
+| **AI Search Crawler Access** | `PASS` | 20.0% | 100.0% | 6 / 6 | All 6 designated AI search crawlers must be permitted to crawl site pages. |
+| **Structured Data (Schema.org)** | `FAIL` | 20.0% | 44.0% | 11 / 25 | Each page must contain at least one valid JSON-LD block with recognized Schema.org types. |
 
-**Overall Score**: `74.4 / 100`
+### Metric Summaries & Top Findings
 
-### Top Action Items for HubSpot
-1. **Optimize Title and Meta Description Lengths (`title_meta`)**:
-   - 18 pages failed either title (target 30–60 characters) or meta description (target 70–160 characters).
-   - Examples:
-     - `https://www.hubspot.com/careers`: Title length is only 15 characters ("HubSpot Careers").
-     - `https://www.hubspot.com/case-studies`: Title length is only 22 characters ("HubSpot Customer Stories").
-     - `https://www.hubspot.com/ai-search-grader`: Meta description is 207 characters (exceeds 160-character snippet boundary).
-2. **Deploy Schema.org JSON-LD Structured Data (`structured_data`)**:
-   - 14 of 25 pages currently omit JSON-LD markup entirely.
-   - Adding `Organization`, `WebPage`, or `Article` schemas will enhance entity extraction for both AI engines (ChatGPT Search, Perplexity) and Google Rich Results.
+#### Title and Meta Description (`title_meta`)
+- **Summary**: 7 of 25 pages (28.0%) meet title (30-60 chars) and meta description (70-160 chars) guidelines.
+- **Why It Matters**: Page titles and descriptions form the snippet shown in search results, directly impacting click-through rates and brand visibility.
+- **How Measured**: Measures decoded character lengths of <head><title> (30-60 chars) and <meta name='description'> (70-160 chars) across crawled pages.
+- **Top Failing Items** (18 total):
+  - `https://www.hubspot.com/ai-search-grader`: Title length 68 (passed: False), Meta desc length 207 (passed: False)
+  - `https://www.hubspot.com/ai-search-sensor`: Title length 58 (passed: True), Meta desc length 166 (passed: False)
+  - `https://www.hubspot.com/careers`: Title length 15 (passed: False), Meta desc length 103 (passed: True)
+  - `https://www.hubspot.com/case-studies`: Title length 22 (passed: False), Meta desc length 133 (passed: True)
+  - `https://www.hubspot.com/case-studies/angel-city`: Title length 10 (passed: False), Meta desc length 221 (passed: False)
 
----
+#### Broken Internal Links (`broken_links`)
+- **Summary**: Found 0 broken links out of 262 internal links checked (0 unreachable).
+- **Why It Matters**: Broken links degrade user navigation and waste crawler budget, preventing search bots from indexing linked pages.
+- **How Measured**: Checks internal links using HEAD with GET fallback; flags any link returning an HTTP 4xx or 5xx response code.
+- **Top Failing Items**: None (all tested items passed)
 
-## 4. Hand-Counted Fixture Verification: Expected vs. Measured
+#### Indexability and Canonicalization (`indexability_canonical`)
+- **Summary**: 25 of 25 pages (100.0%) are indexable and declare valid canonical tags.
+- **Why It Matters**: A page marked noindex cannot appear in search results, and a missing or wrong canonical lets duplicate URLs split ranking signals.
+- **How Measured**: Validates absence of noindex/none directives in meta robots and X-Robots-Tag headers, and verifies that each page defines a valid, matching canonical URL in <head>.
+- **Top Failing Items**: None (all tested items passed)
 
-The fixture test suite (`tests/fixture_site/`) contains 4 pages with deliberate defects planted to prove metric determinism against hand calculations:
-- `index.html`: Fully compliant (all pass)
-- `page-short-title.html`: Short title (17 chars < 30)
-- `page-noindex.html`: Contains `<meta name="robots" content="noindex">`
-- `page-no-canonical.html`: Missing `<link rel="canonical">`
-- `robots.txt`: Disallows ClaudeBot (5 of 6 allowed)
-- 5 internal links tested (including 1 broken 404 target)
+#### AI Search Crawler Access (`ai_crawler_access`)
+- **Summary**: 6 of 6 AI search crawlers (100.0%) are permitted by robots.txt (/llms.txt detected).
+- **Why It Matters**: AI search engines (ChatGPT, Perplexity, Claude, Google AI) require crawler permissions to index and cite your brand in answers.
+- **How Measured**: Tests /robots.txt against 6 key AI crawler tokens: GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, and Google-Extended.
+- **Top Failing Items**: None (all tested items passed)
 
-| Metric | Hand-Counted Expected | Measured Result | Match Status | Notes |
-|---|---|---|---|---|
-| **`title_meta`** | 3 / 4 (75.0%) | 3 / 4 (75.0%) | **EXACT MATCH** | 1 page has title < 30 chars |
-| **`broken_links`** | 4 / 5 (80.0%) | 4 / 5 (80.0%) | **EXACT MATCH** | 1 link returns 404 |
-| **`indexability_canonical`**| 2 / 4 (50.0%) | 2 / 4 (50.0%) | **EXACT MATCH** | 1 noindex page, 1 missing canonical |
-| **`ai_crawler_access`** | 5 / 6 (83.3%) | 5 / 6 (83.3%) | **EXACT MATCH** | ClaudeBot disallowed in robots.txt |
-| **`structured_data`** | 3 / 4 (75.0%) | 3 / 4 (75.0%) | **EXACT MATCH** | 1 page missing JSON-LD |
-| **Overall Score** | **71.2 / 100** | **71.2 / 100** | **EXACT MATCH** | 0.20(75) + 0.15(80) + 0.25(50) + 0.20(83.3) + 0.20(75) = 71.2 |
+#### Structured Data (Schema.org) (`structured_data`)
+- **Summary**: 11 of 25 pages (44.0%) contain valid JSON-LD markup (9 unique schema types detected across the site).
+- **Why It Matters**: Structured data generates rich search results and enables AI crawlers to reliably identify entities, products, and organization data.
+- **How Measured**: Inspects pages for valid JSON-LD (<script type='application/ld+json'>) blocks with recognized Schema.org types.
+- **Top Failing Items** (14 total):
+  - `https://www.hubspot.com/careers`: Missing Schema.org JSON-LD structured data
+  - `https://www.hubspot.com/case-studies`: Missing Schema.org JSON-LD structured data
+  - `https://www.hubspot.com/case-studies/angel-city`: Missing Schema.org JSON-LD structured data
+  - `https://www.hubspot.com/case-studies/unipart`: Missing Schema.org JSON-LD structured data
+  - `https://www.hubspot.com/case-studies/youth-on-course`: Missing Schema.org JSON-LD structured data
 
----
+### Marketer Action List for This Week (Source: `LLM`)
 
-## 5. Real Command Output: Test Suite Execution
+**#1: Optimize Meta Titles and Descriptions** (`title_meta`)
+- **Recommendation**: Rewrite and implement unique, keyword-rich meta titles and descriptions for high-intent pages, focusing on AI tools and the case study directory to improve search visibility.
+- **Business Impact**: Expected increase in Organic Click-Through Rate (CTR) and improved keyword relevance for core AI-related search terms.
+- **Evidence**: Score: 28.0% (7/25 passed).
+- **Sample Affected Pages**: `https://www.hubspot.com/ai-search-grader`, `https://www.hubspot.com/ai-search-sensor`, `https://www.hubspot.com/careers`, `https://www.hubspot.com/case-studies`, `https://www.hubspot.com/case-studies/angel-city`
 
-Command executed:
-```bash
-python -m pytest tests/ -q
-```
-
-```text
-........................................................................ [ 94%]
-....                                                                     [100%]
-76 passed in 2.43s
-```
-
-All 76 unit, integration, security, and fixture tests executed and passed cleanly with 0 failures and 0 warnings.
-
----
-
-## 6. Action Items Generation & LLM Observation
-
-- **Source**: `FALLBACK` (Deterministic Rule Engine)
-- **Observation**:
-  - The audit was executed without a `GEMINI_API_KEY` defined in `.env`.
-  - The application automatically and transparently engaged its built-in deterministic fallback engine (`app/actions.py`).
-  - Action items were prioritized strictly by metric score ascending (lowest scoring metric first: `title_meta` at 28.0%, then `structured_data` at 44.0%).
-  - Affected URLs were pulled directly from the audit detail findings without hallucination.
-  - When a valid `GEMINI_API_KEY` is provided, the LLM prompt injects these exact computed numbers and validates that returned URLs match crawled URLs, preserving strict numeric determinism.
+**#2: Repair Schema.org Markup for Rich Snippets** (`structured_data`)
+- **Recommendation**: Audit and fix broken structured data on Careers and Case Study pages. Ensure JobPosting and Article/CaseStudy schemas are correctly nested and compliant with search engine guidelines.
+- **Business Impact**: Improved SERP real estate through rich snippets, which typically leads to higher engagement and better qualification of incoming traffic.
+- **Evidence**: Score: 44.0% (11/25 passed).
+- **Sample Affected Pages**: `https://www.hubspot.com/careers`, `https://www.hubspot.com/case-studies`, `https://www.hubspot.com/case-studies/angel-city`, `https://www.hubspot.com/case-studies/unipart`, `https://www.hubspot.com/case-studies/youth-on-course`
