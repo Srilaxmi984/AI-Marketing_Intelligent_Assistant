@@ -119,13 +119,19 @@ The CLI prints a structured terminal summary and saves the complete JSON respons
 
 ### 3. Local Fixture Site for Development and Testing
 
-To test audits locally without third-party network requests, start the bundled fixture server:
+To test audits locally without third-party network requests, start the bundled fixture server on port 8001 (distinct from the default app port 8000):
 ```bash
 python scripts/serve_fixture.py
 ```
-Then run the audit against the local fixture:
+
+Because the fixture server runs on a local loopback IP (`127.0.0.1`), SSRF protection blocks requests by default. Auditing local targets requires setting `ALLOW_PRIVATE_TARGETS=true`:
 ```bash
-python cli.py http://127.0.0.1:8000/ --max-pages 10
+# Windows (PowerShell):
+$env:ALLOW_PRIVATE_TARGETS="true"
+python cli.py http://127.0.0.1:8001/ --max-pages 10
+
+# Linux/macOS:
+ALLOW_PRIVATE_TARGETS=true python cli.py http://127.0.0.1:8001/ --max-pages 10
 ```
 
 ---
@@ -153,20 +159,20 @@ curl -X POST http://127.0.0.1:8000/api/audit \
   -d '{"url": "https://www.hubspot.com", "max_pages": 25}'
 ```
 
-#### Successful Response Structure (200 OK)
+#### Successful Response Structure (200 OK, trimmed)
 ```json
 {
-  "audit_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "audit_id": "43b34647-9c2a-4f24-b23e-4baca52b345d",
   "url": "https://www.hubspot.com",
-  "started_at": "2026-11-16T17:00:00Z",
-  "finished_at": "2026-11-16T17:00:15Z",
+  "started_at": "2026-11-16T19:27:58.130557+00:00",
+  "finished_at": "2026-11-16T19:29:17.276889+00:00",
   "crawl": {
     "pages_crawled": 25,
-    "pages_discovered": 64,
+    "pages_discovered": 262,
     "max_pages": 25,
     "truncated": false,
     "truncated_reason": null,
-    "duration_s": 14.82,
+    "duration_s": 20.92,
     "errors": [],
     "skipped_by_robots": []
   },
@@ -176,39 +182,79 @@ curl -X POST http://127.0.0.1:8000/api/audit \
       "name": "Title and Meta Description",
       "mandatory": true,
       "why_it_matters": "Page titles and descriptions form the snippet shown in search results...",
-      "how_measured": "Measures decoded character lengths of <head><title> and <meta name='description'>...",
-      "pass_rule": "Title between 30 and 60 characters; meta description between 70 and 160 characters.",
-      "status": "warn",
-      "score": 76.0,
-      "summary": "19 of 25 pages (76.0%) meet title and meta description guidelines.",
-      "passed": 19,
+      "how_measured": "Measures decoded character lengths of <head><title> (30-60 chars)...",
+      "pass_rule": "Title between 30 and 60 characters inclusive; meta description between 70 and 160 characters inclusive.",
+      "status": "fail",
+      "score": 28.0,
+      "summary": "7 of 25 pages (28.0%) meet title (30-60 chars) and meta description (70-160 chars) guidelines.",
+      "passed": 7,
       "total": 25,
+      "details": [
+        {
+          "url": "https://www.hubspot.com/ai-search-grader",
+          "title": "AI Search Grader: Free One-Time AEO Brand Check, No Account Required",
+          "title_length": 68,
+          "title_passed": false,
+          "meta_description": "Use HubSpot's free AI Search Grader...",
+          "meta_description_length": 207,
+          "meta_description_passed": false,
+          "passed": false
+        }
+      ]
+    },
+    {
+      "id": "broken_links",
+      "name": "Broken Internal Links",
+      "mandatory": true,
+      "why_it_matters": "Broken links degrade user navigation and waste crawler budget...",
+      "how_measured": "Checks internal links using HEAD with GET fallback; flags any link returning HTTP 4xx or 5xx.",
+      "pass_rule": "Zero broken links.",
+      "status": "pass",
+      "score": 100.0,
+      "summary": "Found 0 broken links out of 262 internal links checked (0 unreachable).",
+      "passed": 262,
+      "total": 262,
       "details": []
     }
   ],
   "overall": {
-    "score": 82.4,
+    "score": 74.4,
     "weights": {
       "indexability_canonical": 0.25,
-      "title_meta": 0.20,
-      "ai_crawler_access": 0.20,
-      "structured_data": 0.20,
+      "title_meta": 0.2,
+      "ai_crawler_access": 0.2,
+      "structured_data": 0.2,
       "broken_links": 0.15
     },
-    "formula": "indexability_canonical (25.0% * 100.0) + ... = 82.4"
+    "formula": "title_meta (20.0% * 28.0) + broken_links (15.0% * 100.0) + indexability_canonical (25.0% * 100.0) + ai_crawler_access (20.0% * 100.0) + structured_data (20.0% * 44.0) = 74.4"
   },
   "actions": {
-    "source": "fallback",
-    "fallback_reason": "No GEMINI_API_KEY configured",
+    "source": "llm",
+    "fallback_reason": null,
     "items": [
       {
         "priority": 1,
         "metric_id": "title_meta",
-        "title": "Optimize Page Titles and Meta Descriptions",
-        "recommendation": "Review and update pages with short or missing titles...",
-        "impact": "Improves organic search snippet presentation...",
-        "affected_urls": ["https://www.hubspot.com/pricing"],
-        "evidence": "Score: 76.0% (19/25 passed)."
+        "title": "Optimize Meta Titles and Descriptions",
+        "recommendation": "Rewrite and implement unique, keyword-rich meta titles and descriptions for high-intent pages, focusing on AI tools and the case study directory to improve search visibility.",
+        "impact": "Expected increase in Organic Click-Through Rate (CTR) and improved keyword relevance for core AI-related search terms.",
+        "affected_urls": [
+          "https://www.hubspot.com/ai-search-grader",
+          "https://www.hubspot.com/careers"
+        ],
+        "evidence": "Score: 28.0% (7/25 passed)."
+      },
+      {
+        "priority": 2,
+        "metric_id": "structured_data",
+        "title": "Repair Schema.org Markup for Rich Snippets",
+        "recommendation": "Audit and fix broken structured data on Careers and Case Study pages. Ensure JobPosting and Article/CaseStudy schemas are correctly nested and compliant with search engine guidelines.",
+        "impact": "Improved SERP real estate through rich snippets, which typically leads to higher engagement and better qualification of incoming traffic.",
+        "affected_urls": [
+          "https://www.hubspot.com/careers",
+          "https://www.hubspot.com/case-studies"
+        ],
+        "evidence": "Score: 44.0% (11/25 passed)."
       }
     ]
   },
@@ -232,6 +278,24 @@ Health check endpoint returning `{"status": "ok"}`.
 
 ---
 
+## LLM Safeguards
+
+The application implements defensive engineering boundaries around LLM action generation (`app/llm.py`):
+
+1. **Only Computed Findings Are Sent**: Raw HTML, response headers, and DOM structures are never sent to the LLM. Only sanitized numerical scores, impact deficits, and a small sample of failing URLs calculated deterministically by Python metric engines are included in the prompt.
+2. **Untrusted Data Isolation**: System instructions explicitly designate all text and URLs inside findings as untrusted data originating from external third-party web pages, instructing the model to treat them strictly as passive data and ignore any embedded prompt injections or role override instructions.
+3. **Structured Response Schema & Validation**:
+   - The LLM output is strictly constrained to a JSON array matching a predefined Pydantic schema (`LLMActionProposal`).
+   - The response is capped at a maximum of 5 action items (`raw_items[:5]`).
+   - Action priorities must be integers from 1 to 5 with strict uniqueness (duplicate priorities trigger fallback).
+   - Every `metric_id` must match a recognized system metric identifier (`valid_metric_ids`).
+4. **Anti-Hallucination URL Provenance Guard**: Every URL proposed in `affected_urls` is validated against the exact set of permissible failing URLs provided in the findings (`permissible_urls`). If any proposed URL is not present in the input findings, the entire LLM proposal is rejected as a hallucination.
+5. **Code-Generated Evidence**: The LLM is never permitted to produce or modify metric scores or evidence numbers. The `evidence` field is populated by Python code mapping from deterministic metric results.
+6. **Deterministic Fallback on Any Failure**: If no `GEMINI_API_KEY` is present, if the API call times out or rate limits after retries, if JSON decoding fails, or if any Pydantic validation rule is violated, the system immediately reverts to deterministic rule-based actions (`source: "fallback"`) with an explanatory reason.
+*(Note on implementation: Semantic quality scoring of recommendation prose is not implemented; validation enforces schema integrity, metric validity, and URL provenance).*
+
+---
+
 ## Known Limitations
 
 1. **No JavaScript Rendering**: The crawler parses static server-rendered HTML using BeautifulSoup and lxml. Client-rendered single-page applications (SPAs) requiring JavaScript execution are not evaluated.
@@ -241,13 +305,13 @@ Health check endpoint returning `{"status": "ok"}`.
 5. **DNS Rebinding**: While all URLs and redirect hops are resolved and validated against blocked IP ranges prior to connection, DNS rebinding between check and connect is not fully mitigated without operating-system-level socket pinning.
 6. **HTTP 403 and 429 Status Handling**: Any final HTTP 4xx or 5xx code on internal links is reported as broken per the assignment brief. While 429 responses are retried once after backoff, persistent 403 or 429 codes may stem from WAF rate limiting rather than broken content.
 7. **Canonical Target Indexability**: The canonical check validates target syntax, same-host scope, and absence of conflicts on the source page, but does not crawl the canonical target to confirm that the target itself is indexable.
-8. **Scoring Weights and Thresholds**: Metric weights (e.g. indexability at 0.25 vs broken links at 0.15) and status bands (pass >= 90, warn >= 60) are empirical engineering defaults.
+8. **Scoring Weights and Thresholds**: Metric weights (e.g. indexability at 0.25 vs broken links at 0.15) and status bands (pass >= 90, warn >= 60) are judgment-based engineering defaults.
 
 ---
 
 ## Potential Extensions
 
-If extended for production deployment, the architecture would benefit from:
-- **Asynchronous Task Queue**: Transitioning from synchronous request handling to background workers (e.g., Celery or RQ with Redis), allowing clients to poll status or receive completion via WebSockets.
-- **Headless Browser Rendering**: Integrating a headless Chromium service to audit JavaScript-rendered pages and Core Web Vitals metrics.
-- **Persistent Audit Database**: Storing historical audit runs in PostgreSQL to provide trend analysis and regression tracking across marketing campaigns.
+Based on architectural gaps identified during audit analysis of large enterprise sites:
+1. **Priority-Based Crawl Frontier**: As demonstrated when auditing large multi-section sites, sorting queue links alphabetically causes the crawler to exhaust page caps on deep sub-paths (e.g. `/aeo...` and `/case-studies/...`) before reaching core marketing sections like `/pricing`, `/products`, and `/resources`. A prioritized crawl frontier prioritizing top-level navigation and primary sitemap sections over alphabetized child links would significantly improve audit breadth.
+2. **Deep Path-Level AI Crawler Access Audit**: The current `ai_crawler_access` metric evaluates access against the start URL (`/robots.txt` root rules). Sites like HubSpot permit root access but declare over 300 path-level disallow rules that may selectively block AI search bots from accessing documentation, templates, or dynamic tools. Extending the check to test permissions across all crawled marketing URLs would provide a much more thorough AI search audit.
+3. **Edge WAF Compatibility and User-Agent Negotiation**: Strict edge security firewalls (such as Amazon CloudFront EdgeX) can alter responses or strip `Content-Type` headers when non-standard bot User-Agent comments are used. Adding configurable User-Agent profiles and automatic fallback content-type inspection for edge gateways would improve reliability on heavily protected commercial sites.

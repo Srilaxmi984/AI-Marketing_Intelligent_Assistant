@@ -10,7 +10,7 @@ import sys
 os.environ["ALLOW_PRIVATE_TARGETS"] = "true"
 print("WARNING: ALLOW_PRIVATE_TARGETS is enabled. SSRF protection for private targets is disabled.")
 
-PORT = 8000
+PORT = 8001
 FIXTURE_DIR = Path(__file__).parent.parent / "tests" / "fixture_site"
 
 
