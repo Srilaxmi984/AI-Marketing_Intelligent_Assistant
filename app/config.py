@@ -55,7 +55,7 @@ class Settings(BaseSettings):
 
     # LLM Settings
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-3-flash-preview"
     llm_timeout_s: float = 20.0
 
     @property

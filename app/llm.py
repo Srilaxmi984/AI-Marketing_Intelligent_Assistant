@@ -57,6 +57,15 @@ async def call_gemini_rest(
                 resp.raise_for_status()
                 return resp.json()
             except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 404 and model != "gemini-3-flash-preview":
+                    logger.warning(f"Configured model {model} is unavailable (404), retrying with gemini-3-flash-preview")
+                    return await call_gemini_rest(
+                        payload=payload,
+                        api_key=api_key,
+                        model="gemini-3-flash-preview",
+                        timeout_s=timeout_s,
+                        transport=transport,
+                    )
                 if attempt == retries:
                     raise exc
             except Exception as exc:
