@@ -197,6 +197,17 @@ class Crawler:
                                 f"Start URL redirected to foreign site: {final_url}",
                             )
 
+                        if resp.status_code >= 400:
+                            # DECISION: Non-2xx crawl responses are categorized as fetch errors and excluded from page metrics.
+                            result.errors.append({
+                                "url": current_url,
+                                "status_code": resp.status_code,
+                                "error": f"HTTP {resp.status_code}",
+                            })
+                            if current_url == normalized_start:
+                                raise CrawlError("UNREACHABLE_SITE", f"Start URL returned HTTP {resp.status_code}")
+                            continue
+
                         content_type = resp.headers.get("content-type", "").lower()
                         if current_url == normalized_start and "text/html" not in content_type:
                             raise CrawlError("NOT_HTML", f"Start URL returned non-HTML content-type: {content_type}")
