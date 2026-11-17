@@ -45,6 +45,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 ERROR_HTTP_MAP = {
     "INVALID_URL": status.HTTP_422_UNPROCESSABLE_CONTENT,
+    "INVALID_REQUEST": status.HTTP_422_UNPROCESSABLE_CONTENT,
     "BLOCKED_TARGET": status.HTTP_400_BAD_REQUEST,
     "ROBOTS_DISALLOWED": status.HTTP_403_FORBIDDEN,
     "UNREACHABLE_SITE": status.HTTP_502_BAD_GATEWAY,
@@ -64,7 +65,13 @@ def make_error_response(code: str, message: str) -> JSONResponse:
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    return make_error_response("INVALID_URL", f"Request validation failed: {exc}")
+    # DECISION: Report malformed bodies (missing url, max_pages out of range) as INVALID_REQUEST with a
+    # short field-level message, rather than dumping the raw validation exception as INVALID_URL.
+    problems = []
+    for err in exc.errors():
+        field = ".".join(str(part) for part in err.get("loc", []) if part != "body") or "body"
+        problems.append(f"{field}: {err.get('msg', 'invalid value')}")
+    return make_error_response("INVALID_REQUEST", "; ".join(problems) or "Invalid request body.")
 
 
 @app.exception_handler(Exception)
@@ -105,7 +112,7 @@ async def run_audit(req: AuditRequest):
     max_pages = req.max_pages or settings.default_max_pages
     if max_pages < 1 or max_pages > settings.max_pages_cap:
         return make_error_response(
-            "INVALID_URL",
+            "INVALID_REQUEST",
             f"max_pages must be between 1 and {settings.max_pages_cap} inclusive.",
         )
 

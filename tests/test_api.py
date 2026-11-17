@@ -42,15 +42,19 @@ def test_api_max_pages_out_of_range(client):
     # Max pages cap is 100
     resp1 = client.post("/api/audit", json={"url": "https://example.com", "max_pages": 150})
     assert resp1.status_code == 422
-    assert resp1.json()["error"]["code"] == "INVALID_URL"
+    assert resp1.json()["error"]["code"] == "INVALID_REQUEST"
+    assert "max_pages" in resp1.json()["error"]["message"]
 
     # Max pages min is 1
     resp2 = client.post("/api/audit", json={"url": "https://example.com", "max_pages": 0})
     assert resp2.status_code == 422
-    assert resp2.json()["error"]["code"] == "INVALID_URL"
+    assert resp2.json()["error"]["code"] == "INVALID_REQUEST"
 
 
 def test_api_missing_body(client):
     resp = client.post("/api/audit", json={})
     assert resp.status_code == 422
-    assert resp.json()["error"]["code"] == "INVALID_URL"
+    body = resp.json()
+    assert body["error"]["code"] == "INVALID_REQUEST"
+    assert "url" in body["error"]["message"]  # names the missing field, no raw exception dump
+    assert "Traceback" not in body["error"]["message"]
