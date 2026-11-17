@@ -5,6 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 import logging
 from typing import Dict, List, Optional, Set
+from urllib.parse import urljoin
 
 import httpx
 
@@ -55,59 +56,77 @@ class LinkChecker:
     async def check_single_link(
         self, client: httpx.AsyncClient, target_url: str, sources: List[str]
     ) -> LinkCheckItem:
-        """Check a single target URL using HEAD with fallback to GET."""
-        try:
-            validate_url_security(
-                target_url, allow_private=self.allow_private, dns_resolver=self.dns_resolver
-            )
-        except ValueError as exc:
-            return LinkCheckItem(
-                url=target_url,
-                status_code=None,
-                status="unreachable",
-                error=str(exc),
-                found_on=sources,
-            )
-
-        async def perform_request(method: str) -> httpx.Response:
-            if method == "HEAD":
-                return await client.head(target_url)
-            return await client.get(target_url)
+        """Check a single target URL using HEAD with GET fallback, validating every redirect hop for SSRF up to 5 hops."""
+        current_url = target_url
+        visited_hops = {current_url}
+        max_hops = settings.max_redirects
+        hop_count = 0
 
         try:
-            resp = await perform_request("HEAD")
-            # DECISION: HTTP 405 Method Not Allowed or 501 Not Implemented on HEAD triggers an immediate GET fallback to confirm actual link status.
-            if resp.status_code in (405, 501):
-                resp = await perform_request("GET")
+            while True:
+                # SSRF validation on every hop
+                try:
+                    validate_url_security(
+                        current_url, allow_private=self.allow_private, dns_resolver=self.dns_resolver
+                    )
+                except ValueError:
+                    return LinkCheckItem(
+                        url=target_url,
+                        status_code=None,
+                        status="unreachable",
+                        error="blocked",
+                        found_on=sources,
+                    )
 
-            # Handle 429 Too Many Requests retry once
-            if resp.status_code == 429:
-                await asyncio.sleep(0.5)
-                resp = await perform_request("GET")
+                # Send request without auto-following redirects
+                resp = await client.head(current_url)
+                if resp.status_code in (405, 501):
+                    resp = await client.get(current_url)
 
-            final_status = resp.status_code
-            is_blocked = final_status in (403, 429)
+                if resp.status_code == 429:
+                    await asyncio.sleep(0.5)
+                    resp = await client.get(current_url)
 
-            if final_status >= 400:
-                # DECISION: Every final HTTP 4xx or 5xx response is reported as broken, including 403 and 429, to strictly match the brief definition.
-                return LinkCheckItem(
-                    url=target_url,
-                    status_code=final_status,
-                    status="broken",
-                    error=f"HTTP {final_status}",
-                    found_on=sources,
-                    is_bot_blocked=is_blocked,
-                )
-            else:
-                return LinkCheckItem(
-                    url=target_url,
-                    status_code=final_status,
-                    status="ok",
-                    found_on=sources,
-                )
+                # Check if response is a redirect
+                if resp.is_redirect:
+                    location = resp.headers.get("location")
+                    if not location:
+                        break
+                    next_url = urljoin(current_url, location)
+                    hop_count += 1
+                    if hop_count > max_hops or next_url in visited_hops:
+                        return LinkCheckItem(
+                            url=target_url,
+                            status_code=resp.status_code,
+                            status="broken",
+                            error="Too many redirects or redirect loop",
+                            found_on=sources,
+                        )
+                    visited_hops.add(next_url)
+                    current_url = next_url
+                    continue
+
+                final_status = resp.status_code
+                is_blocked = final_status in (403, 429)
+
+                if final_status >= 400:
+                    return LinkCheckItem(
+                        url=target_url,
+                        status_code=final_status,
+                        status="broken",
+                        error=f"HTTP {final_status}",
+                        found_on=sources,
+                        is_bot_blocked=is_blocked,
+                    )
+                else:
+                    return LinkCheckItem(
+                        url=target_url,
+                        status_code=final_status,
+                        status="ok",
+                        found_on=sources,
+                    )
 
         except (httpx.TimeoutException, httpx.NetworkError, Exception) as exc:
-            # DECISION: Network timeouts and connection drops are classified as unreachable and excluded from the checked denominator.
             return LinkCheckItem(
                 url=target_url,
                 status_code=None,
@@ -148,8 +167,7 @@ class LinkChecker:
             transport=self.transport,
             timeout=timeout,
             headers={"User-Agent": settings.user_agent},
-            follow_redirects=True,
-            max_redirects=settings.max_redirects,
+            follow_redirects=False,
         ) as client:
 
             async def sem_check(target: str) -> LinkCheckItem:

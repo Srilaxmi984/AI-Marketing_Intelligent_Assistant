@@ -172,3 +172,72 @@ async def test_link_checker_time_budget_timeout():
     metric = evaluate_broken_links(report)
     assert metric.total == report.checked_count
 
+
+@pytest.mark.asyncio
+async def test_link_checker_redirect_to_127_blocked():
+    """Verify link checker blocks intermediate redirect to 127.0.0.1 and reports it as unreachable with error 'blocked'."""
+    def handler(request: httpx.Request):
+        url = str(request.url)
+        if url == "https://example.com/redirect-to-127":
+            return httpx.Response(301, headers={"Location": "http://127.0.0.1/admin"})
+        if "127.0.0.1" in url:
+            return httpx.Response(200, text="Internal Admin")
+        return httpx.Response(404)
+
+    pages = [
+        FetchedPage(
+            url="https://example.com/page",
+            final_url="https://example.com/page",
+            status_code=200,
+            headers={},
+            html="",
+            links=["https://example.com/redirect-to-127"],
+        )
+    ]
+
+    checker = LinkChecker(allow_private=False, transport=httpx.MockTransport(handler))
+    report = await checker.check_links(pages)
+
+    assert report.unreachable_count == 1
+    assert report.checked_count == 0
+    assert report.broken_count == 0
+    assert len(report.items) == 1
+    assert report.items[0].url == "https://example.com/redirect-to-127"
+    assert report.items[0].status == "unreachable"
+    assert report.items[0].error == "blocked"
+
+
+@pytest.mark.asyncio
+async def test_link_checker_redirect_to_169_254_blocked():
+    """Verify link checker blocks intermediate redirect to 169.254.169.254 and reports it as unreachable with error 'blocked'."""
+    def handler(request: httpx.Request):
+        url = str(request.url)
+        if url == "https://example.com/redirect-to-169":
+            return httpx.Response(302, headers={"Location": "http://169.254.169.254/latest/meta-data"})
+        if "169.254.169.254" in url:
+            return httpx.Response(200, text="Cloud Metadata")
+        return httpx.Response(404)
+
+    pages = [
+        FetchedPage(
+            url="https://example.com/page",
+            final_url="https://example.com/page",
+            status_code=200,
+            headers={},
+            html="",
+            links=["https://example.com/redirect-to-169"],
+        )
+    ]
+
+    checker = LinkChecker(allow_private=False, transport=httpx.MockTransport(handler))
+    report = await checker.check_links(pages)
+
+    assert report.unreachable_count == 1
+    assert report.checked_count == 0
+    assert report.broken_count == 0
+    assert len(report.items) == 1
+    assert report.items[0].url == "https://example.com/redirect-to-169"
+    assert report.items[0].status == "unreachable"
+    assert report.items[0].error == "blocked"
+
+
