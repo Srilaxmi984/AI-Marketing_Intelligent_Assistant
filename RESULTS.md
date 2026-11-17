@@ -12,8 +12,8 @@
 4. **Realistic Mix of SEO Quality**: Unlike toy or sterile sites that either achieve 100% or fail completely, HubSpot exhibits a nuanced, realistic mix across its marketing properties:
    - Indexability, canonicalization, and internal links score **100.0%**.
    - AI search crawler access scores **100.0%** (all 6 designated user agents allowed, `/llms.txt` present).
-   - Structured data (Schema.org JSON-LD) passes on only **44.0%** (11/25 pages).
-   - Title & meta description guidelines pass on only **28.0%** (7/25 pages) due to oversized titles (>60 chars) or descriptions exceeding 160 characters.
+   - Structured data (Schema.org JSON-LD) passes on **84.0%** (21/25 pages).
+   - Title & meta description guidelines pass on **48.0%** (12/25 pages) due to short titles (<30 chars, e.g. "Case Studies | HubSpot" is 22 chars), oversized titles (>60 chars) or descriptions outside 70-160 characters.
    This provides substantial, non-trivial findings for real marketing recommendations.
 
 ---
