@@ -1,23 +1,25 @@
-# AI Tools and Assistance Disclosure
+# AI Usage
 
-## 1. AI Tools Used
+## 1. Tools used and for what
 
-- **ChatGPT**: Brainstormed technical SEO metrics and trade-offs between conventional search and AI answer-engine visibility.
-- **Antigravity with Gemini 3.8 Flash**: Used as the agentic development environment for scaffolding modules, drafting FastAPI code and tests, and assisting verification.
-- **Google Gemini REST API (`gemini-3-flash-preview`)**: Integrated in `app/llm.py` to turn computed crawler findings into prioritized weekly recommendations. Python—not the LLM—calculates every metric and the overall score.
+- **ChatGPT:** brainstormed SEO metrics and the trade-offs between classic search and AI answer engines.
+- **Antigravity (Gemini 3.8 Flash):** scaffolded modules, drafted FastAPI code and tests.
+- **Gemini API (`gemini-3-flash-preview`), `app/llm.py`:** turns computed findings into a prioritised weekly action list. Python computes every metric and the overall score; the LLM never does.
 
-## 2. Where AI Was Wrong and How I Caught It
+## 2. Where the AI was wrong, and how I noticed
 
-1. **Mock redirect loop**: An AI-generated test handler returned HTTP 302 for both the source host and the offsite redirect destination, causing the client to keep redirecting. Verbose pytest output exposed the hang. I traced the mock and made the destination return 200 OK.
-2. **HTTP 404 counted as an audited page**: The initial crawler accepted HTML responses even when the status was 404. The fixture test expected four pages but found five. I corrected the crawler to record HTTP 4xx/5xx responses as crawl errors and exclude them from page-metric denominators.
-3. **Incomplete httpx timeout**: Generated code supplied only connect and read timeout values. Pytest exposed a `ValueError`; I corrected the timeout configuration to supply the required values.
+1. **Mock redirect loop:** a generated test handler returned 302 for both the source host and the redirect target, so the client looped. Verbose pytest output showed the hang; I fixed the mock so the destination returns 200.
+2. **404 pages counted as audited pages:** the first crawler accepted HTML on 404 responses. A fixture test expected four pages and found five. 4xx/5xx pages are now recorded as crawl errors and excluded from metric denominators.
+3. **Incomplete httpx timeout:** generated code gave only connect/read timeouts and raised `ValueError`. I supplied the full timeout configuration.
+4. **LLM invented a Schema.org type:** in the real HubSpot run, Gemini's action list recommended a type called `URLs`. My validator, which only allows a fixed list of types, rejected it and the report fell back to templates. I noticed because the report showed the fallback and the rejection reason. I then tightened the prompt to list the allowed types.
 
-## 3. Work Verified Independently
+## 3. What I wrote or checked without AI, and why
 
-I investigated the pytest failures rather than accepting generated code as correct. I traced the redirect loop to the mock response, checked why the 404 page affected the crawl count, and followed the timeout exception to the incomplete configuration. I corrected those issues because crawl inclusion and HTTP status handling directly affect metric denominators and the trustworthiness of the final SEO score.
+I checked the scoring and pass/fail boundaries by hand, because they decide the final score. I recomputed the overall score from the metric scores (0.20×48 + 0.15×100 + 0.25×100 + 0.20×100 + 0.20×84 = 86.4) and confirmed it matched the report. I also traced each pytest failure above to its root cause instead of accepting generated fixes.
 
-## 4. What I Would Improve With One More Day
+## 4. With one more day
 
-- **Background processing**: Add Celery/Redis jobs and status polling for long-running audits.
-- **JavaScript rendering**: Add Playwright support for client-rendered pages and Core Web Vitals.
-- **Audit history**: Store results in PostgreSQL to compare audits and detect regressions.
+- Re-run on sitemap-sampled pages and report coverage clearly.
+- Add background jobs with status polling for long audits.
+- Add Playwright rendering for client-side pages.
+- Store audit history to detect regressions.
