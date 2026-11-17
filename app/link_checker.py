@@ -81,7 +81,10 @@ class LinkChecker:
 
                 # Send request without auto-following redirects
                 resp = await client.head(current_url)
-                if resp.status_code in (405, 501):
+                # DECISION: Confirm any HEAD error with GET before calling a link broken. Many servers and
+                # CDNs answer HEAD with 403/404/405/501 while serving the page normally to GET, and the
+                # brief says a link is broken only if it really returns 4xx/5xx.
+                if resp.status_code >= 400:
                     resp = await client.get(current_url)
 
                 if resp.status_code == 429:
