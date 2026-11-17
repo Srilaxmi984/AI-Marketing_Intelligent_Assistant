@@ -78,7 +78,7 @@
           <button type="submit" id="submitBtn">Start Audit</button>
         </div>
       </form>
-      <div id="loadingBanner" class="loading-banner">Auditing target site (90s total deadline: max 40s crawl budget, remaining time for link checks, dedicated 10s LLM timeout)... Please wait.</div>
+      <div id="loadingBanner" class="loading-banner">Auditing target site (TOTAL_BUDGET_S bounds crawl at CRAWL_BUDGET_S=40s and link checks, LLM_TOTAL_BUDGET_S=20s; worst-case total: 110s)... Please wait.</div>
       <div id="errorBanner" class="error-banner"></div>
     </div>
 

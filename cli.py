@@ -45,8 +45,8 @@ async def execute_audit(url: str, max_pages: int) -> AuditResponse:
     crawl_result = await crawler.crawl(normalized_url)
     crawl_dur = round(time.monotonic() - t_crawl_start, 2)
 
-    logger.info(f"Crawled {len(crawl_result.pages)} pages in {crawl_result.duration_s}s.")
-    logger.info("Checking internal links...")
+    logger.info(f"Crawled {len(crawl_result.pages)} pages in {crawl_result.duration_s}s (bounded by CRAWL_BUDGET_S={settings.crawl_budget_s}s).")
+    logger.info("Checking internal links (bounded by remaining TOTAL_BUDGET_S)...")
 
     # Stage 2: Link checks
     t_links_start = time.monotonic()
@@ -75,6 +75,7 @@ async def execute_audit(url: str, max_pages: int) -> AuditResponse:
     overall = calculate_overall_score(metrics_list)
 
     # Stage 3: LLM call
+    logger.info(f"Generating marketing actions (bounded by LLM_TOTAL_BUDGET_S={settings.llm_total_budget_s}s)...")
     t_llm_start = time.monotonic()
     actions = await generate_action_list(metrics_list)
     llm_dur = round(time.monotonic() - t_llm_start, 2)
@@ -127,7 +128,7 @@ def print_summary(response: AuditResponse):
     print(f"Target URL:        {response.url}")
     print(f"Audit ID:          {response.audit_id}")
     print(f"Pages Crawled:     {response.crawl.pages_crawled} (discovered: {response.crawl.pages_discovered})")
-    print(f"Total Duration:    {response.total_duration_s}s (crawl: {response.stage_durations.get('crawl', 0)}s, links: {response.stage_durations.get('link_checks', 0)}s, llm: {response.stage_durations.get('llm', 0)}s)")
+    print(f"Total Duration:    {response.total_duration_s}s (crawl: {response.stage_durations.get('crawl', 0)}s [bounded by CRAWL_BUDGET_S={settings.crawl_budget_s}s], links: {response.stage_durations.get('link_checks', 0)}s [bounded by TOTAL_BUDGET_S={settings.total_budget_s}s], llm: {response.stage_durations.get('llm', 0)}s [bounded by LLM_TOTAL_BUDGET_S={settings.llm_total_budget_s}s], worst-case total: {settings.total_budget_s + settings.llm_total_budget_s}s)")
     print("-" * 70)
     print(f"OVERALL HEALTH SCORE: {response.overall.score} / 100")
     print(f"Scoring Formula:     {response.overall.formula}")
