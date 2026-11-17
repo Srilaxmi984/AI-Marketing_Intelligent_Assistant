@@ -214,11 +214,18 @@ async def generate_action_list(
         seen_priorities: Set[int] = set()
         valid_metric_ids = set(settings.metric_weights.keys())
         allowed_schema_types_lower = {t.lower() for t in settings.allowed_schema_types}
-        disallowed_known_types = {
-            "casestudy", "jobposting", "event", "recipe", "review", "person", "place",
-            "localbusiness", "restaurant", "hotel", "course", "service", "medicalentity",
-            "book", "movie", "videoobject", "audioobject", "howto", "qapage"
+        # DECISION: CamelCase type names are rejected anywhere in the text. Names that are also ordinary
+        # English words ("review", "service", "event") are rejected only when used as a type, for example
+        # "Review schema". Matching them anywhere rejected normal prose like "review the titles".
+        disallowed_unambiguous = {
+            "casestudy", "jobposting", "localbusiness", "medicalentity", "videoobject",
+            "audioobject", "howto", "qapage",
         }
+        disallowed_plain_words = {
+            "event", "recipe", "review", "person", "place", "restaurant", "hotel",
+            "course", "service", "book", "movie",
+        }
+        disallowed_known_types = disallowed_unambiguous | disallowed_plain_words
 
         for idx, item_dict in enumerate(raw_items, 1):
             proposal = LLMActionProposal(**item_dict)
@@ -238,7 +245,10 @@ async def generate_action_list(
             rec_text = f"{proposal.title} {proposal.recommendation}"
             for disallowed in disallowed_known_types:
                 if disallowed not in allowed_schema_types_lower:
-                    pattern = rf"\b{re.escape(disallowed)}\b"
+                    if disallowed in disallowed_plain_words:
+                        pattern = rf"\b{re.escape(disallowed)}\s+(?:schema|markup|structured data|type)\b"
+                    else:
+                        pattern = rf"\b{re.escape(disallowed)}\b"
                     if re.search(pattern, rec_text, re.IGNORECASE):
                         return generate_fallback_actions(
                             ranked_issues,
@@ -246,10 +256,14 @@ async def generate_action_list(
                             model=None,
                         )
 
-            # Also check any PascalCase word that could represent an unlisted Schema.org type
-            pascal_words = re.findall(r"\b[A-Z][a-zA-Z0-9]+(?:[A-Z][a-z0-9]+)+\b", rec_text)
-            for w in pascal_words:
-                if w.lower() not in {"schema", "jsonld", "google", "hubspot", "html", "javascript"} and w.lower() not in allowed_schema_types_lower:
+            # Also catch a CamelCase type name used as a schema, e.g. "ItemList schema".
+            # DECISION: only CamelCase words directly followed by schema/markup/structured data are
+            # treated as type names. Matching every CamelCase word rejected normal prose such as "URLs".
+            typed_words = re.findall(
+                r"\b([A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+)\s+(?:schema|markup|structured data)\b", rec_text
+            )
+            for w in typed_words:
+                if w.lower() not in allowed_schema_types_lower:
                     return generate_fallback_actions(
                         ranked_issues,
                         reason=f"Recommendation names unlisted Schema.org type '{w}' (allowed: {', '.join(settings.allowed_schema_types)})",

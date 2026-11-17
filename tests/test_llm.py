@@ -472,3 +472,93 @@ async def test_llm_total_budget_overrun_fallback(sample_metrics, monkeypatch):
     assert "LLM time limit of 0.05s exceeded" in actions.fallback_reason
 
 
+
+
+@pytest.mark.asyncio
+async def test_llm_accepts_ordinary_camelcase_words(sample_metrics):
+    """Words such as URLs or FAQs are normal prose, not Schema.org type names, and must not trigger fallback."""
+    orig_key = settings.gemini_api_key
+    try:
+        settings.gemini_api_key = "fake_key_for_mock"
+
+        items = [
+            {
+                "priority": 1,
+                "metric_id": "structured_data",
+                "title": "Add Organization schema to key URLs",
+                "recommendation": "Add Organization markup to the listed URLs and review the FAQs page.",
+                "impact": "Better entity recognition.",
+                "affected_urls": ["https://example.com/bad-noindex"],
+            }
+        ]
+
+        def handler(request: httpx.Request):
+            body = {"candidates": [{"content": {"parts": [{"text": json.dumps(items)}]}}]}
+            return httpx.Response(200, json=body)
+
+        actions = await generate_action_list(sample_metrics, transport=httpx.MockTransport(handler))
+
+        assert actions.source == "llm"
+        assert actions.fallback_reason is None
+    finally:
+        settings.gemini_api_key = orig_key
+
+
+@pytest.mark.asyncio
+async def test_llm_rejects_camelcase_type_followed_by_schema(sample_metrics):
+    """A CamelCase type name outside the allowed list, used as a schema, is still rejected."""
+    orig_key = settings.gemini_api_key
+    try:
+        settings.gemini_api_key = "fake_key_for_mock"
+
+        items = [
+            {
+                "priority": 1,
+                "metric_id": "structured_data",
+                "title": "Add ItemList schema",
+                "recommendation": "Add ItemList schema to the listing pages.",
+                "impact": "Rich results.",
+                "affected_urls": ["https://example.com/bad-noindex"],
+            }
+        ]
+
+        def handler(request: httpx.Request):
+            body = {"candidates": [{"content": {"parts": [{"text": json.dumps(items)}]}}]}
+            return httpx.Response(200, json=body)
+
+        actions = await generate_action_list(sample_metrics, transport=httpx.MockTransport(handler))
+
+        assert actions.source == "fallback"
+        assert "unlisted Schema.org type" in actions.fallback_reason
+    finally:
+        settings.gemini_api_key = orig_key
+
+
+@pytest.mark.asyncio
+async def test_llm_rejects_plain_word_type_used_as_schema(sample_metrics):
+    """A name that is also an English word (Review) is rejected only when used as a schema type."""
+    orig_key = settings.gemini_api_key
+    try:
+        settings.gemini_api_key = "fake_key_for_mock"
+
+        items = [
+            {
+                "priority": 1,
+                "metric_id": "structured_data",
+                "title": "Add Review schema",
+                "recommendation": "Add Review schema to the customer pages.",
+                "impact": "Rich results.",
+                "affected_urls": ["https://example.com/bad-noindex"],
+            }
+        ]
+
+        def handler(request: httpx.Request):
+            body = {"candidates": [{"content": {"parts": [{"text": json.dumps(items)}]}}]}
+            return httpx.Response(200, json=body)
+
+        actions = await generate_action_list(sample_metrics, transport=httpx.MockTransport(handler))
+
+        assert actions.source == "fallback"
+        assert "unlisted Schema.org type" in actions.fallback_reason
+    finally:
+        settings.gemini_api_key = orig_key
