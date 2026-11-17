@@ -51,8 +51,8 @@ def evaluate_title_meta(pages: List[FetchedPage]) -> MetricResult:
         if title:
             titles_seen.append(title)
 
-        title_ok = (title is not None) and (30 <= title_len <= 60)
-        desc_ok = (desc is not None) and (70 <= desc_len <= 160)
+        title_ok = (title is not None) and (settings.title_min_chars <= title_len <= settings.title_max_chars)
+        desc_ok = (desc is not None) and (settings.meta_min_chars <= desc_len <= settings.meta_max_chars)
 
         page_passed = title_ok and desc_ok
         if page_passed:
