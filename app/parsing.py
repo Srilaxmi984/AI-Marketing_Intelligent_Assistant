@@ -188,10 +188,11 @@ def check_indexability(
     return is_indexable, failures
 
 
-def extract_internal_links(soup: BeautifulSoup, page_url: str) -> Set[str]:
-    """Extract valid internal links from page, resolved against base href and normalized."""
+def extract_internal_links(soup: BeautifulSoup, page_url: str) -> List[str]:
+    """Extract valid internal links from page in first-seen document order, deduplicated."""
     base_url = extract_base_url(soup, page_url)
-    links = set()
+    seen = set()
+    links = []
 
     for a_tag in soup.find_all("a", href=True):
         raw_href = a_tag["href"].strip()
@@ -216,7 +217,9 @@ def extract_internal_links(soup: BeautifulSoup, page_url: str) -> Set[str]:
         # Keep internal only
         if is_same_site(page_url, resolved):
             normalized = normalize_url(resolved)
-            links.add(normalized)
+            if normalized not in seen:
+                seen.add(normalized)
+                links.append(normalized)
 
     return links
 

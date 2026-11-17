@@ -179,3 +179,37 @@ async def test_crawler_html_content_type_accepted_and_preserved():
     assert "text/html" in page.headers["content-type"]
     assert page.headers["content-type"] == "text/html; charset=UTF-8"
     assert page.headers.get("x-custom-header") == "PreservedValue"
+
+
+@pytest.mark.asyncio
+async def test_crawler_document_order_queueing():
+    """Verify crawler queues discovered links in first-seen document order rather than alphabetical order."""
+    def handler(request: httpx.Request):
+        url = str(request.url)
+        if url.endswith("/robots.txt") or url.endswith("/llms.txt"):
+            return httpx.Response(404)
+        if url in ("https://example.com", "https://example.com/"):
+            html = """
+            <html>
+              <body>
+                <a href="/zebra">Zebra</a>
+                <a href="/apple">Apple</a>
+                <a href="/mango">Mango</a>
+                <a href="/apple">Apple duplicate</a>
+              </body>
+            </html>
+            """
+            return httpx.Response(200, text=html, headers={"Content-Type": "text/html"})
+        return httpx.Response(200, text=f"<html><body>Page {url}</body></html>", headers={"Content-Type": "text/html"})
+
+    crawler = Crawler(max_pages=5, allow_private=True, transport=httpx.MockTransport(handler))
+    result = await crawler.crawl("https://example.com")
+    crawled_urls = [p.url for p in result.pages]
+
+    # Must preserve document order: home, zebra, apple, mango (apple duplicate ignored)
+    assert crawled_urls == [
+        "https://example.com",
+        "https://example.com/zebra",
+        "https://example.com/apple",
+        "https://example.com/mango",
+    ]

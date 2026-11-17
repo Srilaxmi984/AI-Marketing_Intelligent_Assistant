@@ -39,7 +39,7 @@ class FetchedPage:
     status_code: int
     headers: Dict[str, str]
     html: str
-    links: Set[str] = field(default_factory=set)
+    links: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -238,9 +238,9 @@ class Crawler:
                         )
                         result.pages.append(page)
 
-                        # Queue newly discovered internal links if within depth
+                        # DECISION: Queue discovered links in first-seen document order without sorting to honor source page structure.
                         if depth + 1 <= settings.max_crawl_depth:
-                            for link in sorted(links):
+                            for link in links:
                                 if link not in discovered:
                                     discovered.add(link)
                                     queue.append((link, depth + 1))
