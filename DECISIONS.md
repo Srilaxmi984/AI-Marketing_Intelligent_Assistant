@@ -8,15 +8,16 @@
 - **Overall score:** weighted average of the five metric scores (indexability 25%, title/meta 20%, AI access 20%, structured data 20%, broken links 15%). Weights are my judgement: indexability failures are the most severe; broken links are common and fixed cheaply. Bands: pass ≥ 90, warn ≥ 60.
 - **Canonical check:** a same-site canonical passes. I do not fetch the canonical target to confirm it returns 200 or is indexable.
 - **LLM role:** it only phrases the action list. Python computes every metric, score and piece of evidence. LLM output that names Schema.org types outside an allowed list is rejected and replaced by a template fallback.
-- **robots.txt is obeyed**, including for the crawler's own requests.
+- **robots.txt is obeyed**, and every request and redirect hop is checked against private/loopback ranges before it is sent.
 
 ## 2. Unclear in the brief, and how I resolved it
 
 - **"Top 5 metrics" / "overall score":** no formula given. I defined the weighted average above.
 - **"Internal link":** I treat same-host links (after the www rule above) as internal.
 - **403/429 as "broken":** the brief says 4xx/5xx, so I count them, but warn that bot-blocking or rate limits may be the cause.
-- **"Zero broken links" vs. partial coverage:** links checked are capped at 300. Unchecked links are reported as a warning with counts, never as "no broken links". [Verify: the metric status must be `warn` when links are unchecked.]
-- **Time budgets:** [verify against `app/config` and keep README and RESULTS.md identical]: overall deadline, crawl budget and LLM timeout. When a budget is hit, the response says so.
+- **"Zero broken links" vs. partial coverage:** links checked are capped at 300. Unchecked links are reported as a warning with counts, never as "no broken links". The metric status is `warn` (not `pass`) whenever any link was left unchecked, so partial coverage never reads as "zero broken links".
+- **Time budgets (none given):** 90 s for the whole request, at most 40 s of it for crawling, the remainder for link checks, plus a separate 20 s for the LLM. When a budget is hit, the response says which one.
+- **Link errors:** HEAD errors are re-checked with GET (many servers mishandle HEAD). Timeouts and DNS failures count as unreachable, not broken.
 - **Which site:** the brief says "any". I chose a large, server-rendered site so the crawler needs no JavaScript rendering.
 
 ## 3. Three choices I would most want to revisit

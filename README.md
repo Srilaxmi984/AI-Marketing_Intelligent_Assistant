@@ -5,13 +5,13 @@ A lightweight web application and CLI tool that crawls a target website, evaluat
 ## What It Does
 
 1. **Breadth-First Web Crawling**: Crawls internal HTML pages from a designated root URL up to a configured page cap (default 25, cap 100) and max depth of 3, adhering to RFC 9309 robots.txt rules and time budgets (`TOTAL_BUDGET_S`, default 90s: max 40s crawl budget `CRAWL_BUDGET_S`, remaining time for link checking bounded by `TOTAL_BUDGET_S`, and a dedicated `LLM_TOTAL_BUDGET_S` of 20s across retries; worst-case total: 110s).
-2. **SSRF and Input Protection**: Validates all requested URLs and internal links, blocking loopback, private RFC 1918, link-local, multicast, and credential-bearing addresses on ports other than 80/443. Treats empty paths and `/` as equivalent URLs while preserving query parameters and trailing slashes.
+2. **SSRF and Input Protection**: Validates the requested URL, every crawl request and every redirect hop (before the request is sent), blocking loopback, private RFC 1918, link-local, multicast, and credential-bearing addresses on ports other than 80/443. Treats empty paths and `/` as equivalent URLs while preserving query parameters and trailing slashes.
 3. **Deterministic Metric Scoring**: Computes five SEO metrics in Python from crawled data (never produced or altered by an LLM):
    - `title_meta` (Mandatory, 20%): Title tag length (30-60 characters) and meta description length (70-160 characters) in `<head>`.
-   - `broken_links` (Mandatory, 15%): Internal link health checked via HTTP HEAD with GET fallback; flags 4xx/5xx responses; capped at 300 checks; reports stop reason (`completed`, `link cap`, or `time budget`).
+   - `broken_links` (Mandatory, 15%): Internal link health checked via HTTP HEAD, with any HEAD error re-checked using GET before a link is called broken; flags 4xx/5xx responses; capped at 300 checks; reports stop reason (`completed`, `link cap`, or `time budget`). Status is `pass` only when every discovered link was checked and none are broken; if some links were left unchecked it is `warn`.
    - `indexability_canonical` (25%): Verifies absence of noindex/none directives in meta tags and `X-Robots-Tag` headers, and checks valid canonical URLs.
    - `ai_crawler_access` (20%): Evaluates access permissions in `/robots.txt` for 6 AI crawler tokens (GPTBot, OAI-SearchBot, ChatGPT-User, PerplexityBot, ClaudeBot, and Google-Extended).
-   - `structured_data` (20%): Validates presence of Schema.org JSON-LD structured data blocks.
+   - `structured_data` (20%): Passes a page when it has at least one JSON-LD block that parses and declares an `@type` (the type is not checked against the full Schema.org vocabulary).
 4. **Weighted Health Score**: Calculates an overall score from 0.0 to 100.0 (pass >= 90.0%, warn >= 60.0%) with proportional renormalization when metrics are not applicable.
 5. **Marketer Action Items**: Uses Google Gemini REST API (default model: `gemini-3-flash-preview`, with deterministic template fallback when an API key is not present or when rate-limited/timed-out) to generate up to 5 prioritized, marketer-friendly recommendations for the week.
 
@@ -152,18 +152,11 @@ python cli.py http://127.0.0.1:8001/ --max-pages 10
 ALLOW_PRIVATE_TARGETS=true python cli.py http://127.0.0.1:8001/ --max-pages 10
 ```
 
-### Request Time Budget Architecture
-The application applies configured deadlines across stages (`TOTAL_BUDGET_S = 90.0` seconds, `LLM_TOTAL_BUDGET_S = 20.0` seconds; worst-case total: 110.0 seconds):
-1. **Crawl Stage**: Bounded by `CRAWL_BUDGET_S = 40.0` seconds (and overall `TOTAL_BUDGET_S`). If exceeded, crawling truncates gracefully and proceeds to link checks.
-2. **Link Check Stage**: Receives the remaining time from `TOTAL_BUDGET_S` (`deadline - now`), capped at 300 links (`MAX_LINK_CHECKS = 300`). If link checking runs out of time, it stops immediately, records `stop_reason = "time budget"`, reports how many links were checked out of how many were found, adds a warning to the response, and scores `broken_links` on checked links only.
-3. **LLM Stage**: Bounded by its own total wall-clock budget across retries (`LLM_TOTAL_BUDGET_S = 20.0` seconds, per-attempt `LLM_TIMEOUT_S = 10.0` seconds).
-The response records `total_duration_s` and the per-stage breakdown in `stage_durations` (`crawl`, `link_checks`, `llm`).
-
 ---
 
 ## Automated Tests
 
-Run the complete test suite (95 passed offline tests):
+Run the complete test suite (103 offline tests):
 ```bash
 python -m pytest tests/ -v
 ```
@@ -308,7 +301,7 @@ curl -X POST http://127.0.0.1:8000/api/audit \
   }
 }
 ```
-Standard error codes: `INVALID_URL` (422), `BLOCKED_TARGET` (400), `ROBOTS_DISALLOWED` (403), `UNREACHABLE_SITE` (502), `NOT_HTML` (422), `REDIRECTED_OFFSITE` (422), `TIMEOUT` (504), `INTERNAL_ERROR` (500).
+Standard error codes: `INVALID_URL` (422, bad or unsupported URL), `INVALID_REQUEST` (422, malformed body or `max_pages` out of range), `BLOCKED_TARGET` (400), `ROBOTS_DISALLOWED` (403), `UNREACHABLE_SITE` (502), `NOT_HTML` (422), `REDIRECTED_OFFSITE` (422), `TIMEOUT` (504), `INTERNAL_ERROR` (500).
 
 ### `GET /api/health`
 Health check endpoint returning `{"status": "ok"}`.
@@ -343,6 +336,9 @@ The application implements defensive engineering boundaries around LLM action ge
 6. **HTTP 403 and 429 Status Handling**: Any final HTTP 4xx or 5xx code on internal links is reported as broken per the assignment brief. While 429 responses are retried once after backoff, persistent 403 or 429 codes may stem from WAF rate limiting rather than broken content.
 7. **Canonical Target Indexability**: The canonical check validates target syntax, same-host scope, and absence of conflicts on the source page, but does not crawl the canonical target to confirm that the target itself is indexable.
 8. **Scoring Weights and Thresholds**: Metric weights (e.g. indexability at 0.25 vs broken links at 0.15) and status bands (pass >= 90, warn >= 60) are judgment-based engineering defaults.
+9. **Sequential Crawl**: Pages are fetched one at a time by design (polite to the target, deterministic document-order queueing). Only link checking runs concurrently (`LINK_CHECK_CONCURRENCY`).
+10. **Structured Data Depth**: The check confirms JSON-LD exists, parses, and declares an `@type`; it does not validate required properties or check types against Schema.org.
+11. **AI Crawler Check Scope**: Each AI crawler token is tested against the site root only, so a rule that blocks a bot from a sub-path (for example `/blog/`) is not detected.
 
 ---
 
