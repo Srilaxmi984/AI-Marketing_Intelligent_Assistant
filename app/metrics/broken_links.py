@@ -39,7 +39,7 @@ def evaluate_broken_links(report: LinkCheckerReport) -> MetricResult:
             why_it_matters="Broken links degrade user navigation and waste crawler budget, preventing search bots from indexing linked pages.",
             how_measured="Checks internal links using HEAD with GET fallback; flags any link returning an HTTP 4xx or 5xx response code.",
             pass_rule="Zero broken links.",
-            status="pass",
+            status="warn" if links_unchecked > 0 else "pass",
             score=100.0,
             summary=summary,
             passed=0,
@@ -52,9 +52,16 @@ def evaluate_broken_links(report: LinkCheckerReport) -> MetricResult:
 
     passed_count = checked - broken
     score = round(100.0 * (1.0 - (broken / checked)), 1)
-    # DECISION: Broken links passes strictly at zero broken links as mandated by the project brief.
-    status = "pass" if broken == 0 else ("warn" if score >= settings.warn_threshold else "fail")
-    
+    # DECISION: Broken links passes only at zero broken links AND full coverage.
+    # If some discovered links were never checked (link cap or time budget), a clean
+    # result is only partial evidence, so the status is "warn" rather than "pass".
+    if broken > 0:
+        status = "warn" if score >= settings.warn_threshold else "fail"
+    elif links_unchecked > 0:
+        status = "warn"
+    else:
+        status = "pass"
+
     if report.stop_reason == "time budget":
         summary = (
             f"{broken} broken out of {checked} checked; "

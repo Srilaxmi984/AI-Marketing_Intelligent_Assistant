@@ -98,6 +98,18 @@ class TestBrokenLinksMetric:
         assert res.total == 0
         assert res.passed == 0
         assert res.score == 100.0
+        assert res.status == "pass"
+
+    def test_broken_links_partial_coverage_warns(self):
+        report = LinkCheckerReport(
+            checked_count=3, broken_count=0, unreachable_count=0, items=[]
+        )
+        report.total_found = 5
+        report.stop_reason = "link cap"
+        res = evaluate_broken_links(report)
+        assert res.score == 100.0
+        assert res.links_unchecked == 2
+        assert res.status == "warn"
 
 
 class TestIndexabilityCanonicalMetric:

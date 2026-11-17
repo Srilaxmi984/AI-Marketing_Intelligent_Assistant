@@ -278,6 +278,7 @@ async def test_link_checker_cap_coverage_and_warning(monkeypatch):
     assert metric.links_unchecked == 2
     assert "0 broken out of 3 checked; 2 of 5 internal links were not checked because of the 3-link cap." in metric.summary
     assert metric.score == 100.0
+    assert metric.status == "warn"
     assert metric.passed == 3
     assert metric.total == 3
 
@@ -319,6 +320,8 @@ async def test_link_checker_stop_reason_time_budget():
     assert "checking stopped because the time budget was reached" in metric.summary
     # Ensure it did NOT blame the cap
     assert "cap" not in metric.summary
+    # Unchecked links remain, so a clean result must not be a full pass
+    assert metric.status == "warn"
 
 
 @pytest.mark.asyncio
@@ -353,6 +356,4 @@ async def test_link_checker_stop_reason_completed():
     assert "Found 0 broken links out of 2 internal links checked" in metric.summary
     assert "cap" not in metric.summary
     assert "time budget" not in metric.summary
-
-
-
+    assert metric.status == "pass"
