@@ -114,7 +114,18 @@ Start the local server using uvicorn:
 ```bash
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-Open `http://127.0.0.1:8000/` in your browser to access the static web dashboard. Using `python -m uvicorn` avoids relying on the standalone `uvicorn` command being on PATH. For the 2–5 minute screen-recording flow and narration, see [DEMO_SCRIPT.md](DEMO_SCRIPT.md).
+Open `http://127.0.0.1:8000/` in your browser to access the static web dashboard. Using `python -m uvicorn` avoids relying on the standalone `uvicorn` command being on PATH. For a concise 2–5 minute screen-recording flow and narration, see the [Demo Recording Flow](#demo-recording-flow) below.
+
+
+### Demo Recording Flow (2–5 minutes)
+
+1. **Introduction (15–30 sec):** State the problem and explain that the tool audits technical SEO and AI-search readiness.
+2. **Launch (20–30 sec):** Start the FastAPI server and open the dashboard. Briefly show the target URL and page-limit inputs.
+3. **Run an audit (60–90 sec):** Audit a website and show the crawl summary, five metric scores, overall score, and prioritized actions. Explain that Python computes scores and the LLM only phrases recommendations.
+4. **Explain engineering safeguards (30–60 sec):** Point out URL/SSRF validation, robots.txt handling, crawl/link limits, and deterministic fallback when Gemini is unavailable.
+5. **Close (15–30 sec):** Show the CLI or API docs and summarize one limitation, such as the page cap or lack of JavaScript rendering.
+
+Keep the recording between 2 and 5 minutes. Use a real run, avoid exposing API keys or other secrets, and ensure the final video clearly shows the application working.
 
 ### 2. Command-Line Interface (CLI)
 
