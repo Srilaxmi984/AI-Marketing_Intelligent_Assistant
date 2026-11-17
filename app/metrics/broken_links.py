@@ -21,6 +21,9 @@ def evaluate_broken_links(report: LinkCheckerReport) -> MetricResult:
                 "is_bot_blocked": item.is_bot_blocked,
             })
 
+    links_found = report.total_found
+    links_unchecked = max(0, report.total_found - checked)
+
     if checked == 0:
         # DECISION: When no internal links return an HTTP status, the metric is marked not applicable to prevent division by zero.
         return MetricResult(
@@ -35,6 +38,8 @@ def evaluate_broken_links(report: LinkCheckerReport) -> MetricResult:
             summary="No internal links were available to check.",
             passed=0,
             total=0,
+            links_found=links_found,
+            links_unchecked=links_unchecked,
             details=details,
         )
 
@@ -42,7 +47,14 @@ def evaluate_broken_links(report: LinkCheckerReport) -> MetricResult:
     score = round(100.0 * (1.0 - (broken / checked)), 1)
     # DECISION: Broken links passes strictly at zero broken links as mandated by the project brief.
     status = "pass" if broken == 0 else ("warn" if score >= settings.warn_threshold else "fail")
-    summary = f"Found {broken} broken links out of {checked} internal links checked ({report.unreachable_count} unreachable)."
+    
+    if links_unchecked > 0:
+        summary = (
+            f"{broken} broken out of {checked} checked; "
+            f"{links_unchecked} of {links_found} internal links were not checked because of the {settings.max_link_checks}-link cap."
+        )
+    else:
+        summary = f"Found {broken} broken links out of {checked} internal links checked ({report.unreachable_count} unreachable)."
 
     return MetricResult(
         id="broken_links",
@@ -56,5 +68,7 @@ def evaluate_broken_links(report: LinkCheckerReport) -> MetricResult:
         summary=summary,
         passed=passed_count,
         total=checked,
+        links_found=links_found,
+        links_unchecked=links_unchecked,
         details=details,
     )

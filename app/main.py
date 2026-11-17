@@ -184,6 +184,8 @@ async def run_audit(req: AuditRequest):
             "link_checks": links_dur,
             "llm": llm_dur,
         },
+        links_found=metric_broken_links.links_found,
+        links_unchecked=metric_broken_links.links_unchecked,
         crawl=crawl_stats,
         metrics=metrics_list,
         overall=overall,

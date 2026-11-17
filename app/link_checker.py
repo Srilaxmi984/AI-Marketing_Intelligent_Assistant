@@ -152,6 +152,12 @@ class LinkChecker:
         sorted_targets = sorted(url_to_sources.keys())[: settings.max_link_checks]
 
         report = LinkCheckerReport(total_found=total_found)
+        if len(sorted_targets) < total_found:
+            links_unchecked = total_found - len(sorted_targets)
+            report.warnings.append(
+                f"Link check cap reached: {links_unchecked} of {total_found} internal links were not checked because of the {settings.max_link_checks}-link cap."
+            )
+
         if not sorted_targets:
             return report
 

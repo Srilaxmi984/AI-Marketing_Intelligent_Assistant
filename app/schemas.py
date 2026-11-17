@@ -41,6 +41,8 @@ class MetricResult(BaseModel):
     summary: str
     passed: int
     total: int
+    links_found: Optional[int] = None
+    links_unchecked: Optional[int] = None
     details: List[Dict[str, Any]] = Field(default_factory=list)
 
 
@@ -74,6 +76,8 @@ class AuditResponse(BaseModel):
     finished_at: str
     total_duration_s: float = 0.0
     stage_durations: Dict[str, float] = Field(default_factory=dict)
+    links_found: Optional[int] = None
+    links_unchecked: Optional[int] = None
     crawl: CrawlStats
     metrics: List[MetricResult]
     overall: OverallScore

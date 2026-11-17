@@ -241,3 +241,43 @@ async def test_link_checker_redirect_to_169_254_blocked():
     assert report.items[0].error == "blocked"
 
 
+@pytest.mark.asyncio
+async def test_link_checker_cap_coverage_and_warning(monkeypatch):
+    """Verify that when links exceed the cap, links_found and links_unchecked are tracked, warning added, and scored on checked only."""
+    from app.config import settings
+    from app.metrics.broken_links import evaluate_broken_links
+
+    monkeypatch.setattr(settings, "max_link_checks", 3)
+
+    def handler(request: httpx.Request):
+        return httpx.Response(200)
+
+    links = [f"https://example.com/link-{i}" for i in range(5)]
+    pages = [
+        FetchedPage(
+            url="https://example.com/page",
+            final_url="https://example.com/page",
+            status_code=200,
+            headers={},
+            html="",
+            links=links,
+        )
+    ]
+
+    checker = LinkChecker(allow_private=True, transport=httpx.MockTransport(handler))
+    report = await checker.check_links(pages)
+
+    assert report.total_found == 5
+    assert report.checked_count == 3
+    assert any("cap reached: 2 of 5" in w for w in report.warnings)
+
+    metric = evaluate_broken_links(report)
+    assert metric.links_found == 5
+    assert metric.links_unchecked == 2
+    assert "0 broken out of 3 checked; 2 of 5 internal links were not checked because of the 3-link cap." in metric.summary
+    assert metric.score == 100.0
+    assert metric.passed == 3
+    assert metric.total == 3
+
+
+
