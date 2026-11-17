@@ -30,11 +30,13 @@ class LinkCheckItem:
 
 @dataclass
 class LinkCheckerReport:
+    total_found: int = 0
     checked_count: int = 0
     broken_count: int = 0
     unreachable_count: int = 0
     items: List[LinkCheckItem] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
+    timed_out: bool = False
 
 
 class LinkChecker:
@@ -114,8 +116,12 @@ class LinkChecker:
                 found_on=sources,
             )
 
-    async def check_links(self, pages: List[FetchedPage]) -> LinkCheckerReport:
-        """Check all unique internal links found across crawled pages."""
+    async def check_links(
+        self,
+        pages: List[FetchedPage],
+        time_budget_s: Optional[float] = None,
+    ) -> LinkCheckerReport:
+        """Check all unique internal links found across crawled pages, respecting an optional time budget."""
         # 1. Map target URL to source pages
         url_to_sources: Dict[str, Set[str]] = defaultdict(set)
         for page in pages:
@@ -123,9 +129,10 @@ class LinkChecker:
             for link in page.links:
                 url_to_sources[link].add(source)
 
+        total_found = len(url_to_sources)
         sorted_targets = sorted(url_to_sources.keys())[: settings.max_link_checks]
 
-        report = LinkCheckerReport()
+        report = LinkCheckerReport(total_found=total_found)
         if not sorted_targets:
             return report
 
@@ -150,21 +157,39 @@ class LinkChecker:
                     sources = sorted(list(url_to_sources[target]))
                     return await self.check_single_link(client, target, sources)
 
-            tasks = [sem_check(target) for target in sorted_targets]
-            results = await asyncio.gather(*tasks)
+            tasks = [asyncio.create_task(sem_check(target)) for target in sorted_targets]
+            if time_budget_s is not None:
+                done, pending = await asyncio.wait(tasks, timeout=max(0.0, time_budget_s))
+                if pending:
+                    report.timed_out = True
+                    for p in pending:
+                        p.cancel()
+                    await asyncio.gather(*pending, return_exceptions=True)
+            else:
+                done, _ = await asyncio.wait(tasks)
 
-        for item in results:
-            report.items.append(item)
-            if item.status == "broken":
-                report.broken_count += 1
-                report.checked_count += 1
-                if item.is_bot_blocked:
-                    report.warnings.append(
-                        f"Potential bot-blocking or rate-limiting detected (HTTP {item.status_code}) on {item.url}"
-                    )
-            elif item.status == "ok":
-                report.checked_count += 1
-            elif item.status == "unreachable":
-                report.unreachable_count += 1
+            for task in done:
+                if not task.cancelled():
+                    try:
+                        item = task.result()
+                        report.items.append(item)
+                        if item.status == "broken":
+                            report.broken_count += 1
+                            report.checked_count += 1
+                            if item.is_bot_blocked:
+                                report.warnings.append(
+                                    f"Potential bot-blocking or rate-limiting detected (HTTP {item.status_code}) on {item.url}"
+                                )
+                        elif item.status == "ok":
+                            report.checked_count += 1
+                        elif item.status == "unreachable":
+                            report.unreachable_count += 1
+                    except Exception as exc:
+                        logger.warning(f"Error checking link: {exc}")
+
+        if report.timed_out:
+            report.warnings.append(
+                f"Link checking timed out: checked {report.checked_count} of {report.total_found} links found."
+            )
 
         return report

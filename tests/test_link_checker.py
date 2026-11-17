@@ -135,3 +135,40 @@ async def test_link_checker_network_timeout_reported_as_unreachable():
     assert report.checked_count == 0
     assert report.broken_count == 0
     assert report.items[0].status == "unreachable"
+
+
+@pytest.mark.asyncio
+async def test_link_checker_time_budget_timeout():
+    """Verify link checking halts gracefully on timeout, records warnings, and scores only checked links."""
+    import asyncio
+    from app.metrics.broken_links import evaluate_broken_links
+
+    async def async_handler(request: httpx.Request):
+        url = str(request.url)
+        if "slow" in url:
+            await asyncio.sleep(0.3)
+        return httpx.Response(200)
+
+    pages = [
+        FetchedPage(
+            url="https://example.com/page",
+            final_url="https://example.com/page",
+            status_code=200,
+            headers={},
+            html="",
+            links=[f"https://example.com/slow-{i}" for i in range(10)],
+        )
+    ]
+
+    checker = LinkChecker(allow_private=True, transport=httpx.MockTransport(async_handler))
+    # Give a tiny budget of 0.05s for 10 slow requests
+    report = await checker.check_links(pages, time_budget_s=0.05)
+
+    assert report.timed_out is True
+    assert report.total_found == 10
+    assert report.checked_count < report.total_found
+    assert any("timed out" in w for w in report.warnings)
+
+    metric = evaluate_broken_links(report)
+    assert metric.total == report.checked_count
+

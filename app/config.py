@@ -17,7 +17,9 @@ class Settings(BaseSettings):
     crawl_concurrency: int = 5
     connect_timeout_s: float = 5.0
     read_timeout_s: float = 10.0
-    crawl_time_budget_s: float = 60.0
+    total_budget_s: float = 90.0
+    crawl_budget_s: float = 40.0
+    crawl_time_budget_s: float = 40.0  # Alias for crawl_budget_s
     max_body_bytes: int = 2 * 1024 * 1024  # 2 MB limit
     max_redirects: int = 5
 
@@ -56,7 +58,7 @@ class Settings(BaseSettings):
     # LLM Settings
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3-flash-preview"
-    llm_timeout_s: float = 20.0
+    llm_timeout_s: float = 10.0
 
     @property
     def user_agent(self) -> str:

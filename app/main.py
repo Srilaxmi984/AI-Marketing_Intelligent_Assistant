@@ -86,7 +86,9 @@ async def health_check():
 
 @app.post("/api/audit", response_model=AuditResponse)
 async def run_audit(req: AuditRequest):
-    # DECISION: Audits execute synchronously within the 60s request budget to keep architecture simple, while background job workers are noted as a production alternative.
+    # DECISION: Audits use a single overall deadline (settings.total_budget_s = 90s); crawl uses at most settings.crawl_budget_s (40s), link checks use remaining time, and LLM uses its own timeout.
+    request_start = time.monotonic()
+    deadline = request_start + settings.total_budget_s
     started_at = datetime.now(timezone.utc).isoformat()
     audit_id = str(uuid.uuid4())
 
@@ -108,17 +110,23 @@ async def run_audit(req: AuditRequest):
         )
 
     # 2. Run Breadth-First Crawl
+    t_crawl_start = time.monotonic()
+    crawl_budget = min(settings.crawl_budget_s, max(0.0, deadline - time.monotonic()))
     try:
-        crawler = Crawler(max_pages=max_pages)
+        crawler = Crawler(max_pages=max_pages, time_budget_s=crawl_budget)
         crawl_result = await crawler.crawl(normalized_url)
     except CrawlError as exc:
         return make_error_response(exc.code, exc.message)
     except Exception as exc:
         return make_error_response("UNREACHABLE_SITE", f"Crawl failed: {exc}")
+    crawl_dur = round(time.monotonic() - t_crawl_start, 2)
 
     # 3. Check internal links
+    t_links_start = time.monotonic()
+    remaining_for_links = max(0.0, deadline - time.monotonic())
     link_checker = LinkChecker()
-    link_report = await link_checker.check_links(crawl_result.pages)
+    link_report = await link_checker.check_links(crawl_result.pages, time_budget_s=remaining_for_links)
+    links_dur = round(time.monotonic() - t_links_start, 2)
 
     # 4. Evaluate the 5 SEO metrics in Python from crawled data
     metric_title_meta = evaluate_title_meta(crawl_result.pages)
@@ -141,7 +149,11 @@ async def run_audit(req: AuditRequest):
     overall = calculate_overall_score(metrics_list)
 
     # 6. Generate action items via LLM or deterministic fallback
+    t_llm_start = time.monotonic()
     actions = await generate_action_list(metrics_list)
+    llm_dur = round(time.monotonic() - t_llm_start, 2)
+
+    total_dur = round(time.monotonic() - request_start, 2)
 
     # 7. Collect warnings
     warnings = list(link_report.warnings)
@@ -166,6 +178,12 @@ async def run_audit(req: AuditRequest):
         url=normalized_url,
         started_at=started_at,
         finished_at=finished_at,
+        total_duration_s=total_dur,
+        stage_durations={
+            "crawl": crawl_dur,
+            "link_checks": links_dur,
+            "llm": llm_dur,
+        },
         crawl=crawl_stats,
         metrics=metrics_list,
         overall=overall,

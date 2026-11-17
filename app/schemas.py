@@ -71,6 +71,8 @@ class AuditResponse(BaseModel):
     url: str
     started_at: str
     finished_at: str
+    total_duration_s: float = 0.0
+    stage_durations: Dict[str, float] = Field(default_factory=dict)
     crawl: CrawlStats
     metrics: List[MetricResult]
     overall: OverallScore

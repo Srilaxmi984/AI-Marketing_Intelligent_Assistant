@@ -4,7 +4,7 @@ A lightweight web application and CLI tool that crawls a target website, evaluat
 
 ## What It Does
 
-1. **Breadth-First Web Crawling**: Crawls internal HTML pages from a designated root URL up to a configured page cap (default 25, cap 100) and max depth of 3, adhering strictly to RFC 9309 robots.txt rules and a 60-second time budget.
+1. **Breadth-First Web Crawling**: Crawls internal HTML pages from a designated root URL up to a configured page cap (default 25, cap 100) and max depth of 3, adhering strictly to RFC 9309 robots.txt rules and a 90-second total request deadline (`TOTAL_BUDGET_S`, default 90s: max 40s crawl budget `CRAWL_BUDGET_S`, remaining time for link checking, and a dedicated `LLM_TIMEOUT` of 10s).
 2. **SSRF and Input Protection**: Validates all requested URLs and internal links, blocking loopback, private RFC 1918, link-local, multicast, and credential-bearing addresses on ports other than 80/443.
 3. **Deterministic Metric Scoring**: Computes five SEO metrics strictly in Python from crawled data (never produced or altered by an LLM):
    - `title_meta` (Mandatory): Title tag length (30-60 characters) and meta description length (70-160 characters) in `<head>`.
@@ -60,6 +60,13 @@ The system operates as a modular, single-process pipeline without external datab
                      v
          [ JSON Response / UI / CLI ]
 ```
+
+### Request Time Budget Architecture
+The application applies a single deadline for the entire audit request (`TOTAL_BUDGET_S = 90.0` seconds):
+1. **Crawl Stage**: May use at most `CRAWL_BUDGET_S = 40.0` seconds. If exceeded, crawling truncates gracefully and proceeds to link checks.
+2. **Link Check Stage**: Receives the remaining time from the 90s deadline (`deadline - now`). If link checking runs out of time, it stops immediately, reports how many links were checked out of how many were found, adds a warning to the response, and scores `broken_links` on checked links only.
+3. **LLM Stage**: Operates with its own dedicated timeout (`LLM_TIMEOUT = 10.0` seconds).
+The response records `total_duration_s` and the per-stage breakdown in `stage_durations` (`crawl`, `link_checks`, `llm`).
 
 ---
 
@@ -133,6 +140,13 @@ python cli.py http://127.0.0.1:8001/ --max-pages 10
 # Linux/macOS:
 ALLOW_PRIVATE_TARGETS=true python cli.py http://127.0.0.1:8001/ --max-pages 10
 ```
+
+### Request Time Budget Architecture
+The application applies a single deadline for the entire audit request (`TOTAL_BUDGET_S = 90.0` seconds):
+1. **Crawl Stage**: May use at most `CRAWL_BUDGET_S = 40.0` seconds. If exceeded, crawling truncates gracefully and proceeds to link checks.
+2. **Link Check Stage**: Receives the remaining time from the 90s deadline (`deadline - now`). If link checking runs out of time, it stops immediately, reports how many links were checked out of how many were found, adds a warning to the response, and scores `broken_links` on checked links only.
+3. **LLM Stage**: Operates with its own dedicated timeout (`LLM_TIMEOUT = 10.0` seconds).
+The response records `total_duration_s` and the per-stage breakdown in `stage_durations` (`crawl`, `link_checks`, `llm`).
 
 ---
 

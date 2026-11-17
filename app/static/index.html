@@ -77,7 +77,7 @@
           <button type="submit" id="submitBtn">Start Audit</button>
         </div>
       </form>
-      <div id="loadingBanner" class="loading-banner">Crawling target site (up to 60s budget)... Please wait.</div>
+      <div id="loadingBanner" class="loading-banner">Auditing target site (90s total deadline: max 40s crawl, remaining for link checks, dedicated LLM timeout)... Please wait.</div>
       <div id="errorBanner" class="error-banner"></div>
     </div>
 
@@ -174,8 +174,10 @@
       scoreDisp.style.color = audit.overall.score >= 90 ? 'var(--pass)' : (audit.overall.score >= 60 ? 'var(--warn)' : 'var(--fail)');
 
       document.getElementById('overallFormula').textContent = 'Formula: ' + audit.overall.formula;
+      const dur = audit.total_duration_s || audit.crawl.duration_s;
+      const stages = audit.stage_durations ? ` [Crawl: ${audit.stage_durations.crawl || 0}s, Links: ${audit.stage_durations.link_checks || 0}s, LLM: ${audit.stage_durations.llm || 0}s]` : '';
       document.getElementById('crawlStatsText').textContent =
-        `Audited ${audit.crawl.pages_crawled} pages (${audit.crawl.pages_discovered} discovered) in ${audit.crawl.duration_s}s. Target: ${audit.url}`;
+        `Audited ${audit.crawl.pages_crawled} pages (${audit.crawl.pages_discovered} discovered) in ${dur}s${stages}. Target: ${audit.url}`;
 
       // 2. Action Items
       const sourceBadge = document.getElementById('actionsSourceBadge');

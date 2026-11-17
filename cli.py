@@ -29,19 +29,30 @@ logger = logging.getLogger("cli")
 
 async def execute_audit(url: str, max_pages: int) -> AuditResponse:
     """Run complete audit pipeline for given target URL."""
+    request_start = time.monotonic()
+    deadline = request_start + settings.total_budget_s
     started_at = datetime.now(timezone.utc).isoformat()
     audit_id = str(uuid.uuid4())
 
     normalized_url = validate_url_security(url)
     logger.info(f"Starting audit for {normalized_url} (max pages: {max_pages})...")
 
-    crawler = Crawler(max_pages=max_pages)
+    # Stage 1: Crawl
+    t_crawl_start = time.monotonic()
+    crawl_budget = min(settings.crawl_budget_s, max(0.0, deadline - time.monotonic()))
+    crawler = Crawler(max_pages=max_pages, time_budget_s=crawl_budget)
     crawl_result = await crawler.crawl(normalized_url)
+    crawl_dur = round(time.monotonic() - t_crawl_start, 2)
 
     logger.info(f"Crawled {len(crawl_result.pages)} pages in {crawl_result.duration_s}s.")
     logger.info("Checking internal links...")
+
+    # Stage 2: Link checks
+    t_links_start = time.monotonic()
+    remaining_for_links = max(0.0, deadline - time.monotonic())
     link_checker = LinkChecker()
-    link_report = await link_checker.check_links(crawl_result.pages)
+    link_report = await link_checker.check_links(crawl_result.pages, time_budget_s=remaining_for_links)
+    links_dur = round(time.monotonic() - t_links_start, 2)
 
     logger.info("Evaluating 5 SEO metrics...")
     metric_title_meta = evaluate_title_meta(crawl_result.pages)
@@ -61,7 +72,13 @@ async def execute_audit(url: str, max_pages: int) -> AuditResponse:
     ]
 
     overall = calculate_overall_score(metrics_list)
+
+    # Stage 3: LLM call
+    t_llm_start = time.monotonic()
     actions = await generate_action_list(metrics_list)
+    llm_dur = round(time.monotonic() - t_llm_start, 2)
+
+    total_dur = round(time.monotonic() - request_start, 2)
 
     warnings = list(link_report.warnings)
     if crawl_result.truncated:
@@ -85,6 +102,12 @@ async def execute_audit(url: str, max_pages: int) -> AuditResponse:
         url=normalized_url,
         started_at=started_at,
         finished_at=finished_at,
+        total_duration_s=total_dur,
+        stage_durations={
+            "crawl": crawl_dur,
+            "link_checks": links_dur,
+            "llm": llm_dur,
+        },
         crawl=crawl_stats,
         metrics=metrics_list,
         overall=overall,
@@ -101,7 +124,7 @@ def print_summary(response: AuditResponse):
     print(f"Target URL:        {response.url}")
     print(f"Audit ID:          {response.audit_id}")
     print(f"Pages Crawled:     {response.crawl.pages_crawled} (discovered: {response.crawl.pages_discovered})")
-    print(f"Crawl Duration:    {response.crawl.duration_s}s")
+    print(f"Total Duration:    {response.total_duration_s}s (crawl: {response.stage_durations.get('crawl', 0)}s, links: {response.stage_durations.get('link_checks', 0)}s, llm: {response.stage_durations.get('llm', 0)}s)")
     print("-" * 70)
     print(f"OVERALL HEALTH SCORE: {response.overall.score} / 100")
     print(f"Scoring Formula:     {response.overall.formula}")

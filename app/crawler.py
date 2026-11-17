@@ -104,11 +104,13 @@ class Crawler:
         allow_private: Optional[bool] = None,
         dns_resolver: Optional[DNSResolver] = None,
         transport: Optional[httpx.AsyncBaseTransport] = None,
+        time_budget_s: Optional[float] = None,
     ):
         self.max_pages = min(max_pages or settings.default_max_pages, settings.max_pages_cap)
         self.allow_private = allow_private if allow_private is not None else settings.allow_private_targets
         self.dns_resolver = dns_resolver
         self.transport = transport
+        self.time_budget_s = time_budget_s if time_budget_s is not None else settings.crawl_budget_s
 
     async def crawl(self, start_url: str) -> CrawlResult:
         start_time = time.monotonic()
@@ -154,10 +156,10 @@ class Crawler:
             semaphore = asyncio.Semaphore(settings.crawl_concurrency)
 
             while queue and len(result.pages) < self.max_pages:
-                # Check 60s crawl budget
-                if time.monotonic() - start_time >= settings.crawl_time_budget_s:
+                # Check crawl budget
+                if time.monotonic() - start_time >= self.time_budget_s:
                     result.truncated = True
-                    result.truncated_reason = f"Crawl time budget exceeded ({settings.crawl_time_budget_s}s)"
+                    result.truncated_reason = f"Crawl time budget exceeded ({self.time_budget_s}s)"
                     break
 
                 # Pop current item
