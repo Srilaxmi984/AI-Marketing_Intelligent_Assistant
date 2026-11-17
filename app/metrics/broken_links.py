@@ -26,6 +26,12 @@ def evaluate_broken_links(report: LinkCheckerReport) -> MetricResult:
 
     if checked == 0:
         # DECISION: When no internal links return an HTTP status, the metric is marked not applicable to prevent division by zero.
+        if report.stop_reason == "time budget":
+            summary = f"0 of {links_found} internal links checked; checking stopped because the time budget was reached."
+        elif report.stop_reason == "link cap":
+            summary = f"{links_unchecked} of {links_found} internal links were not checked because of the {settings.max_link_checks}-link cap."
+        else:
+            summary = "No internal links were available to check."
         return MetricResult(
             id="broken_links",
             name="Broken Internal Links",
@@ -35,11 +41,12 @@ def evaluate_broken_links(report: LinkCheckerReport) -> MetricResult:
             pass_rule="Zero broken links.",
             status="pass",
             score=100.0,
-            summary="No internal links were available to check.",
+            summary=summary,
             passed=0,
             total=0,
             links_found=links_found,
             links_unchecked=links_unchecked,
+            stop_reason=report.stop_reason,
             details=details,
         )
 
@@ -48,7 +55,12 @@ def evaluate_broken_links(report: LinkCheckerReport) -> MetricResult:
     # DECISION: Broken links passes strictly at zero broken links as mandated by the project brief.
     status = "pass" if broken == 0 else ("warn" if score >= settings.warn_threshold else "fail")
     
-    if links_unchecked > 0:
+    if report.stop_reason == "time budget":
+        summary = (
+            f"{broken} broken out of {checked} checked; "
+            f"{checked} of {links_found} internal links checked; checking stopped because the time budget was reached."
+        )
+    elif report.stop_reason == "link cap" or links_unchecked > 0:
         summary = (
             f"{broken} broken out of {checked} checked; "
             f"{links_unchecked} of {links_found} internal links were not checked because of the {settings.max_link_checks}-link cap."
@@ -70,5 +82,6 @@ def evaluate_broken_links(report: LinkCheckerReport) -> MetricResult:
         total=checked,
         links_found=links_found,
         links_unchecked=links_unchecked,
+        stop_reason=report.stop_reason,
         details=details,
     )

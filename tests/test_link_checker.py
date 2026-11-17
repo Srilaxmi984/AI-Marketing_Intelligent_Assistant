@@ -269,15 +269,90 @@ async def test_link_checker_cap_coverage_and_warning(monkeypatch):
 
     assert report.total_found == 5
     assert report.checked_count == 3
+    assert report.stop_reason == "link cap"
     assert any("cap reached: 2 of 5" in w for w in report.warnings)
 
     metric = evaluate_broken_links(report)
+    assert metric.stop_reason == "link cap"
     assert metric.links_found == 5
     assert metric.links_unchecked == 2
     assert "0 broken out of 3 checked; 2 of 5 internal links were not checked because of the 3-link cap." in metric.summary
     assert metric.score == 100.0
     assert metric.passed == 3
     assert metric.total == 3
+
+
+@pytest.mark.asyncio
+async def test_link_checker_stop_reason_time_budget():
+    """Verify stop_reason='time budget' when time budget is exceeded."""
+    import asyncio
+    from app.metrics.broken_links import evaluate_broken_links
+
+    async def slow_handler(request: httpx.Request):
+        url = str(request.url)
+        if "fast" in url:
+            return httpx.Response(200)
+        await asyncio.sleep(2.0)
+        return httpx.Response(200)
+
+    pages = [
+        FetchedPage(
+            url="https://example.com/p",
+            final_url="https://example.com/p",
+            status_code=200,
+            headers={},
+            html="",
+            links={"https://example.com/slow1", "https://example.com/slow2"},
+        )
+    ]
+
+    checker = LinkChecker(allow_private=True, transport=httpx.MockTransport(slow_handler))
+    # Provide a very small time budget so it times out
+    report = await checker.check_links(pages, time_budget_s=0.01)
+
+    assert report.timed_out is True
+    assert report.stop_reason == "time budget"
+    assert any("checking stopped because the time budget was reached" in w for w in report.warnings)
+
+    metric = evaluate_broken_links(report)
+    assert metric.stop_reason == "time budget"
+    assert "checking stopped because the time budget was reached" in metric.summary
+    # Ensure it did NOT blame the cap
+    assert "cap" not in metric.summary
+
+
+@pytest.mark.asyncio
+async def test_link_checker_stop_reason_completed():
+    """Verify stop_reason='completed' when all links are checked within limits."""
+    from app.metrics.broken_links import evaluate_broken_links
+
+    def handler(request: httpx.Request):
+        return httpx.Response(200)
+
+    pages = [
+        FetchedPage(
+            url="https://example.com/p",
+            final_url="https://example.com/p",
+            status_code=200,
+            headers={},
+            html="",
+            links={"https://example.com/link1", "https://example.com/link2"},
+        )
+    ]
+
+    checker = LinkChecker(allow_private=True, transport=httpx.MockTransport(handler))
+    report = await checker.check_links(pages, time_budget_s=10.0)
+
+    assert report.timed_out is False
+    assert report.stop_reason == "completed"
+    assert report.checked_count == 2
+    assert report.total_found == 2
+
+    metric = evaluate_broken_links(report)
+    assert metric.stop_reason == "completed"
+    assert "Found 0 broken links out of 2 internal links checked" in metric.summary
+    assert "cap" not in metric.summary
+    assert "time budget" not in metric.summary
 
 
 

@@ -43,6 +43,7 @@ class MetricResult(BaseModel):
     total: int
     links_found: Optional[int] = None
     links_unchecked: Optional[int] = None
+    stop_reason: Optional[str] = None
     details: List[Dict[str, Any]] = Field(default_factory=list)
 
 

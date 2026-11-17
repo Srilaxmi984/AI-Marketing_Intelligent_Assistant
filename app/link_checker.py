@@ -38,6 +38,7 @@ class LinkCheckerReport:
     items: List[LinkCheckItem] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     timed_out: bool = False
+    stop_reason: str = "completed"  # "link cap" | "time budget" | "completed"
 
 
 class LinkChecker:
@@ -153,6 +154,7 @@ class LinkChecker:
 
         report = LinkCheckerReport(total_found=total_found)
         if len(sorted_targets) < total_found:
+            report.stop_reason = "link cap"
             links_unchecked = total_found - len(sorted_targets)
             report.warnings.append(
                 f"Link check cap reached: {links_unchecked} of {total_found} internal links were not checked because of the {settings.max_link_checks}-link cap."
@@ -186,6 +188,7 @@ class LinkChecker:
                 done, pending = await asyncio.wait(tasks, timeout=max(0.0, time_budget_s))
                 if pending:
                     report.timed_out = True
+                    report.stop_reason = "time budget"
                     for p in pending:
                         p.cancel()
                     await asyncio.gather(*pending, return_exceptions=True)
@@ -213,7 +216,7 @@ class LinkChecker:
 
         if report.timed_out:
             report.warnings.append(
-                f"Link checking timed out: checked {report.checked_count} of {report.total_found} links found."
+                f"Link checking timed out: {report.checked_count} of {report.total_found} internal links checked; checking stopped because the time budget was reached."
             )
 
         return report
