@@ -20,46 +20,48 @@
 
 ## 2. SEO Audit Report: https://www.hubspot.com
 
-- **Audit ID**: `43b34647-9c2a-4f24-b23e-4baca52b345d`
-- **Started At**: 2026-11-16T19:27:58.130557+00:00
-- **Finished At**: 2026-11-16T19:29:17.276889+00:00
-- **Pages Crawled**: 25 (discovered: 262)
+- **Audit ID**: `9285326e-d76e-44cd-90d0-67c1a44df825`
+- **Started At**: 2026-11-17T06:05:30.701268+00:00
+- **Finished At**: 2026-11-17T06:06:33.921922+00:00
+- **Pages Crawled**: 25 (discovered: 365)
 - **Max Pages Cap**: 25
-- **Crawl Duration**: 20.92 seconds
+- **Total Duration**: 63.22 seconds
+- **Stage Durations**: Crawl: 16.95s, Link Checks: 35.02s, LLM: 3.38s
+- **Time Budget Scope**: Request deadline of 90s total (max 40s crawl budget, remaining time for link checks, dedicated LLM timeout)
 - **Time Budget Truncated**: False
 
 ### Overall Health Score
 
-**Score**: `74.4 / 100`
+**Score**: `86.4 / 100`
 
 **Scoring Formula**:
-> `title_meta (20.0% * 28.0) + broken_links (15.0% * 100.0) + indexability_canonical (25.0% * 100.0) + ai_crawler_access (20.0% * 100.0) + structured_data (20.0% * 44.0) = 74.4`
+> `title_meta (20.0% * 48.0) + broken_links (15.0% * 100.0) + indexability_canonical (25.0% * 100.0) + ai_crawler_access (20.0% * 100.0) + structured_data (20.0% * 84.0) = 86.4`
 
 ### Core SEO Metrics
 
 | Metric | Status | Weight | Score | Passed / Total | Pass Rule |
 |---|---|---|---|---|---|
-| **Title and Meta Description** | `FAIL` | 20.0% | 28.0% | 7 / 25 | Title between 30 and 60 characters inclusive; meta description between 70 and 160 characters inclusive. |
-| **Broken Internal Links** | `PASS` | 15.0% | 100.0% | 262 / 262 | Zero broken links. |
+| **Title and Meta Description** | `FAIL` | 20.0% | 48.0% | 12 / 25 | Title between 30 and 60 characters inclusive; meta description between 70 and 160 characters inclusive. |
+| **Broken Internal Links** | `PASS` | 15.0% | 100.0% | 300 / 300 | Zero broken links. |
 | **Indexability and Canonicalization** | `PASS` | 25.0% | 100.0% | 25 / 25 | A page passes only if it is indexable and declares a valid canonical URL on the same site. |
 | **AI Search Crawler Access** | `PASS` | 20.0% | 100.0% | 6 / 6 | All 6 designated AI search crawlers must be permitted to crawl site pages. |
-| **Structured Data (Schema.org)** | `FAIL` | 20.0% | 44.0% | 11 / 25 | Each page must contain at least one valid JSON-LD block with recognized Schema.org types. |
+| **Structured Data (Schema.org)** | `WARN` | 20.0% | 84.0% | 21 / 25 | Each page must contain at least one valid JSON-LD block with recognized Schema.org types. |
 
 ### Metric Summaries & Top Findings
 
 #### Title and Meta Description (`title_meta`)
-- **Summary**: 7 of 25 pages (28.0%) meet title (30-60 chars) and meta description (70-160 chars) guidelines.
+- **Summary**: 12 of 25 pages (48.0%) meet title (30-60 chars) and meta description (70-160 chars) guidelines.
 - **Why It Matters**: Page titles and descriptions form the snippet shown in search results, directly impacting click-through rates and brand visibility.
 - **How Measured**: Measures decoded character lengths of <head><title> (30-60 chars) and <meta name='description'> (70-160 chars) across crawled pages.
-- **Top Failing Items** (18 total):
-  - `https://www.hubspot.com/ai-search-grader`: Title length 68 (passed: False), Meta desc length 207 (passed: False)
-  - `https://www.hubspot.com/ai-search-sensor`: Title length 58 (passed: True), Meta desc length 166 (passed: False)
+- **Top Failing Items** (13 total):
   - `https://www.hubspot.com/careers`: Title length 15 (passed: False), Meta desc length 103 (passed: True)
-  - `https://www.hubspot.com/case-studies`: Title length 22 (passed: False), Meta desc length 133 (passed: True)
-  - `https://www.hubspot.com/case-studies/angel-city`: Title length 10 (passed: False), Meta desc length 221 (passed: False)
+  - `https://www.hubspot.com/company/contact`: Title length 20 (passed: False), Meta desc length 0 (passed: False)
+  - `https://www.hubspot.com/company/management`: Title length 61 (passed: False), Meta desc length 33 (passed: False)
+  - `https://www.hubspot.com/products/service`: Title length 54 (passed: True), Meta desc length 173 (passed: False)
+  - `https://www.hubspot.com/products/content`: Title length 65 (passed: False), Meta desc length 160 (passed: True)
 
 #### Broken Internal Links (`broken_links`)
-- **Summary**: Found 0 broken links out of 262 internal links checked (0 unreachable).
+- **Summary**: Found 0 broken links out of 300 internal links checked (0 unreachable).
 - **Why It Matters**: Broken links degrade user navigation and waste crawler budget, preventing search bots from indexing linked pages.
 - **How Measured**: Checks internal links using HEAD with GET fallback; flags any link returning an HTTP 4xx or 5xx response code.
 - **Top Failing Items**: None (all tested items passed)
@@ -77,26 +79,27 @@
 - **Top Failing Items**: None (all tested items passed)
 
 #### Structured Data (Schema.org) (`structured_data`)
-- **Summary**: 11 of 25 pages (44.0%) contain valid JSON-LD markup (9 unique schema types detected across the site).
+- **Summary**: 21 of 25 pages (84.0%) contain valid JSON-LD markup (11 unique schema types detected across the site).
 - **Why It Matters**: Structured data generates rich search results and enables AI crawlers to reliably identify entities, products, and organization data.
 - **How Measured**: Inspects pages for valid JSON-LD (<script type='application/ld+json'>) blocks with recognized Schema.org types.
-- **Top Failing Items** (14 total):
+- **Top Failing Items** (4 total):
+  - `https://www.hubspot.com/our-story`: Missing Schema.org JSON-LD structured data
   - `https://www.hubspot.com/careers`: Missing Schema.org JSON-LD structured data
-  - `https://www.hubspot.com/case-studies`: Missing Schema.org JSON-LD structured data
-  - `https://www.hubspot.com/case-studies/angel-city`: Missing Schema.org JSON-LD structured data
-  - `https://www.hubspot.com/case-studies/unipart`: Missing Schema.org JSON-LD structured data
-  - `https://www.hubspot.com/case-studies/youth-on-course`: Missing Schema.org JSON-LD structured data
+  - `https://www.hubspot.com/company/contact`: Missing Schema.org JSON-LD structured data
+  - `https://www.hubspot.com/company/management`: Missing Schema.org JSON-LD structured data
 
-### Marketer Action List for This Week (Source: `LLM`)
+### Marketer Action List for This Week (Source: `FALLBACK`)
 
-**#1: Optimize Meta Titles and Descriptions** (`title_meta`)
-- **Recommendation**: Rewrite and implement unique, keyword-rich meta titles and descriptions for high-intent pages, focusing on AI tools and the case study directory to improve search visibility.
-- **Business Impact**: Expected increase in Organic Click-Through Rate (CTR) and improved keyword relevance for core AI-related search terms.
-- **Evidence**: Score: 28.0% (7/25 passed).
-- **Sample Affected Pages**: `https://www.hubspot.com/ai-search-grader`, `https://www.hubspot.com/ai-search-sensor`, `https://www.hubspot.com/careers`, `https://www.hubspot.com/case-studies`, `https://www.hubspot.com/case-studies/angel-city`
+> Note on action source: Gemini API returned HTTP 429
 
-**#2: Repair Schema.org Markup for Rich Snippets** (`structured_data`)
-- **Recommendation**: Audit and fix broken structured data on Careers and Case Study pages. Ensure JobPosting and Article/CaseStudy schemas are correctly nested and compliant with search engine guidelines.
-- **Business Impact**: Improved SERP real estate through rich snippets, which typically leads to higher engagement and better qualification of incoming traffic.
-- **Evidence**: Score: 44.0% (11/25 passed).
-- **Sample Affected Pages**: `https://www.hubspot.com/careers`, `https://www.hubspot.com/case-studies`, `https://www.hubspot.com/case-studies/angel-city`, `https://www.hubspot.com/case-studies/unipart`, `https://www.hubspot.com/case-studies/youth-on-course`
+**#1: Optimize Page Titles and Meta Descriptions** (`title_meta`)
+- **Recommendation**: Review and update pages with short or missing titles (target 30-60 characters) and meta descriptions (target 70-160 characters).
+- **Business Impact**: Improves organic search snippet presentation and click-through rates on search results pages.
+- **Evidence**: Score: 48.0% (12/25 passed).
+- **Sample Affected Pages**: `https://www.hubspot.com/careers`, `https://www.hubspot.com/company/contact`, `https://www.hubspot.com/company/management`, `https://www.hubspot.com/products/service`, `https://www.hubspot.com/products/content`
+
+**#2: Deploy Schema.org JSON-LD Structured Data** (`structured_data`)
+- **Recommendation**: Add valid JSON-LD markup (e.g. Organization, Product, WebSite) across crawled pages.
+- **Business Impact**: Enables rich search snippets and improves entity recognition across modern search engines.
+- **Evidence**: Score: 84.0% (21/25 passed).
+- **Sample Affected Pages**: `https://www.hubspot.com/our-story`, `https://www.hubspot.com/careers`, `https://www.hubspot.com/company/contact`, `https://www.hubspot.com/company/management`

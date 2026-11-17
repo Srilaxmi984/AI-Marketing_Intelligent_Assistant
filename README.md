@@ -176,17 +176,23 @@ curl -X POST http://127.0.0.1:8000/api/audit \
 #### Successful Response Structure (200 OK, trimmed)
 ```json
 {
-  "audit_id": "43b34647-9c2a-4f24-b23e-4baca52b345d",
+  "audit_id": "9285326e-d76e-44cd-90d0-67c1a44df825",
   "url": "https://www.hubspot.com",
-  "started_at": "2026-11-16T19:27:58.130557+00:00",
-  "finished_at": "2026-11-16T19:29:17.276889+00:00",
+  "started_at": "2026-11-17T06:05:30.701268+00:00",
+  "finished_at": "2026-11-17T06:06:33.921922+00:00",
+  "total_duration_s": 63.22,
+  "stage_durations": {
+    "crawl": 16.95,
+    "link_checks": 35.02,
+    "llm": 3.38
+  },
   "crawl": {
     "pages_crawled": 25,
-    "pages_discovered": 262,
+    "pages_discovered": 365,
     "max_pages": 25,
     "truncated": false,
     "truncated_reason": null,
-    "duration_s": 20.92,
+    "duration_s": 16.95,
     "errors": [],
     "skipped_by_robots": []
   },
@@ -199,19 +205,19 @@ curl -X POST http://127.0.0.1:8000/api/audit \
       "how_measured": "Measures decoded character lengths of <head><title> (30-60 chars)...",
       "pass_rule": "Title between 30 and 60 characters inclusive; meta description between 70 and 160 characters inclusive.",
       "status": "fail",
-      "score": 28.0,
-      "summary": "7 of 25 pages (28.0%) meet title (30-60 chars) and meta description (70-160 chars) guidelines.",
-      "passed": 7,
+      "score": 48.0,
+      "summary": "12 of 25 pages (48.0%) meet title (30-60 chars) and meta description (70-160 chars) guidelines.",
+      "passed": 12,
       "total": 25,
       "details": [
         {
-          "url": "https://www.hubspot.com/ai-search-grader",
-          "title": "AI Search Grader: Free One-Time AEO Brand Check, No Account Required",
-          "title_length": 68,
+          "url": "https://www.hubspot.com/careers",
+          "title": "HubSpot Careers",
+          "title_length": 15,
           "title_passed": false,
-          "meta_description": "Use HubSpot's free AI Search Grader...",
-          "meta_description_length": 207,
-          "meta_description_passed": false,
+          "meta_description": "Ready to do your best work? Explore career opportunities globally and learn more about HubSpot culture.",
+          "meta_description_length": 103,
+          "meta_description_passed": true,
           "passed": false
         }
       ]
@@ -225,50 +231,56 @@ curl -X POST http://127.0.0.1:8000/api/audit \
       "pass_rule": "Zero broken links.",
       "status": "pass",
       "score": 100.0,
-      "summary": "Found 0 broken links out of 262 internal links checked (0 unreachable).",
-      "passed": 262,
-      "total": 262,
+      "summary": "Found 0 broken links out of 300 internal links checked (0 unreachable).",
+      "passed": 300,
+      "total": 300,
       "details": []
     }
   ],
   "overall": {
-    "score": 74.4,
+    "score": 86.4,
     "weights": {
-      "indexability_canonical": 0.25,
       "title_meta": 0.2,
+      "broken_links": 0.15,
+      "indexability_canonical": 0.25,
       "ai_crawler_access": 0.2,
-      "structured_data": 0.2,
-      "broken_links": 0.15
+      "structured_data": 0.2
     },
-    "formula": "title_meta (20.0% * 28.0) + broken_links (15.0% * 100.0) + indexability_canonical (25.0% * 100.0) + ai_crawler_access (20.0% * 100.0) + structured_data (20.0% * 44.0) = 74.4"
+    "formula": "title_meta (20.0% * 48.0) + broken_links (15.0% * 100.0) + indexability_canonical (25.0% * 100.0) + ai_crawler_access (20.0% * 100.0) + structured_data (20.0% * 84.0) = 86.4"
   },
   "actions": {
-    "source": "llm",
-    "fallback_reason": null,
+    "source": "fallback",
+    "model": null,
+    "fallback_reason": "Gemini API returned HTTP 429",
     "items": [
       {
         "priority": 1,
         "metric_id": "title_meta",
-        "title": "Optimize Meta Titles and Descriptions",
-        "recommendation": "Rewrite and implement unique, keyword-rich meta titles and descriptions for high-intent pages, focusing on AI tools and the case study directory to improve search visibility.",
-        "impact": "Expected increase in Organic Click-Through Rate (CTR) and improved keyword relevance for core AI-related search terms.",
+        "title": "Optimize Page Titles and Meta Descriptions",
+        "recommendation": "Review and update pages with short or missing titles (target 30-60 characters) and meta descriptions (target 70-160 characters).",
+        "impact": "Improves organic search snippet presentation and click-through rates on search results pages.",
         "affected_urls": [
-          "https://www.hubspot.com/ai-search-grader",
-          "https://www.hubspot.com/careers"
+          "https://www.hubspot.com/careers",
+          "https://www.hubspot.com/company/contact",
+          "https://www.hubspot.com/company/management",
+          "https://www.hubspot.com/products/service",
+          "https://www.hubspot.com/products/content"
         ],
-        "evidence": "Score: 28.0% (7/25 passed)."
+        "evidence": "Score: 48.0% (12/25 passed)."
       },
       {
         "priority": 2,
         "metric_id": "structured_data",
-        "title": "Repair Schema.org Markup for Rich Snippets",
-        "recommendation": "Audit and fix broken structured data on Careers and Case Study pages. Ensure JobPosting and Article/CaseStudy schemas are correctly nested and compliant with search engine guidelines.",
-        "impact": "Improved SERP real estate through rich snippets, which typically leads to higher engagement and better qualification of incoming traffic.",
+        "title": "Deploy Schema.org JSON-LD Structured Data",
+        "recommendation": "Add valid JSON-LD markup (e.g. Organization, Product, WebSite) across crawled pages.",
+        "impact": "Enables rich search snippets and improves entity recognition across modern search engines.",
         "affected_urls": [
+          "https://www.hubspot.com/our-story",
           "https://www.hubspot.com/careers",
-          "https://www.hubspot.com/case-studies"
+          "https://www.hubspot.com/company/contact",
+          "https://www.hubspot.com/company/management"
         ],
-        "evidence": "Score: 44.0% (11/25 passed)."
+        "evidence": "Score: 84.0% (21/25 passed)."
       }
     ]
   },
