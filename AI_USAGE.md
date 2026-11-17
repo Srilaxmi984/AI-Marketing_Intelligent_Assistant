@@ -14,7 +14,7 @@
 
 ## 3. Work Completed or Verified Independently
 
-I independently investigated the failing pytest output instead of accepting generated code as correct. I traced the redirect-loop test to its mock response, checked why a 404 HTML page was incorrectly included in the crawl results, and followed the timeout exception to the incomplete `httpx.Timeout` arguments. I then changed the relevant test or implementation logic and reran the affected tests. I did this because crawler inclusion rules and link status handling directly affect metric denominators and therefore the trustworthiness of the final SEO score.
+I independently investigated the failing pytest output instead of accepting generated code as correct. I traced the redirect-loop test to its mock response, checked why a 404 HTML page was incorrectly included in the crawl results, and followed the timeout exception to the incomplete `httpx.Timeout` arguments. I then corrected the mock response, crawler status handling, and timeout arguments based on those failures. I did this because crawler inclusion rules and link status handling directly affect metric denominators and therefore the trustworthiness of the final SEO score.
 
 ## 4. What I Would Improve With One More Day
 
