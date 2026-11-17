@@ -20,14 +20,14 @@
 
 ## 2. SEO Audit Report: https://www.hubspot.com
 
-- **Audit ID**: `9285326e-d76e-44cd-90d0-67c1a44df825`
-- **Started At**: 2026-11-17T06:05:30.701268+00:00
-- **Finished At**: 2026-11-17T06:06:33.921922+00:00
+- **Audit ID**: `adae33cf-cc78-485f-83f2-df6d957fd224`
+- **Started At**: 2026-11-17T09:36:23.504160+00:00
+- **Finished At**: 2026-11-17T09:37:28.026258+00:00
 - **Pages Crawled**: 25 (discovered: 365)
 - **Max Pages Cap**: 25
-- **Total Duration**: 63.22 seconds
-- **Stage Durations**: Crawl: 16.95s, Link Checks: 35.02s, LLM: 3.38s
-- **Time Budget Scope**: Request deadline of 90s total (max 40s crawl budget, remaining time for link checks, dedicated LLM timeout)
+- **Total Duration**: 64.52 seconds
+- **Stage Durations**: Crawl: 15.61s, Link Checks: 28.61s, LLM: 20.07s
+- **Time Budget Scope**: Request deadline of 90s total (max 40s crawl budget, remaining time for link checks, dedicated 10s LLM timeout)
 - **Time Budget Truncated**: False
 
 ### Overall Health Score
@@ -61,7 +61,7 @@
   - `https://www.hubspot.com/products/content`: Title length 65 (passed: False), Meta desc length 160 (passed: True)
 
 #### Broken Internal Links (`broken_links`)
-- **Summary**: Found 0 broken links out of 300 internal links checked (0 unreachable).
+- **Summary**: 0 broken out of 300 checked; 65 of 365 internal links were not checked because of the 300-link cap.
 - **Why It Matters**: Broken links degrade user navigation and waste crawler budget, preventing search bots from indexing linked pages.
 - **How Measured**: Checks internal links using HEAD with GET fallback; flags any link returning an HTTP 4xx or 5xx response code.
 - **Top Failing Items**: None (all tested items passed)
@@ -90,7 +90,7 @@
 
 ### Marketer Action List for This Week (Source: `FALLBACK`)
 
-> Note on action source: Gemini API returned HTTP 429
+> Note on action source: Recommendation names unlisted Schema.org type 'URLs' (allowed: Organization, WebSite, WebPage, Article, BreadcrumbList, FAQPage, Product, SoftwareApplication)
 
 **#1: Optimize Page Titles and Meta Descriptions** (`title_meta`)
 - **Recommendation**: Review and update pages with short or missing titles (target 30-60 characters) and meta descriptions (target 70-160 characters).
@@ -103,3 +103,7 @@
 - **Business Impact**: Enables rich search snippets and improves entity recognition across modern search engines.
 - **Evidence**: Score: 84.0% (21/25 passed).
 - **Sample Affected Pages**: `https://www.hubspot.com/our-story`, `https://www.hubspot.com/careers`, `https://www.hubspot.com/company/contact`, `https://www.hubspot.com/company/management`
+
+### Audit Warnings
+
+- Link check cap reached: 65 of 365 internal links were not checked because of the 300-link cap.
