@@ -99,7 +99,10 @@
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <h2 style="font-size: 1.25rem; font-weight: 700;">Marketer Action List (This Week)</h2>
-          <span id="actionsSourceBadge" class="badge"></span>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span id="actionsSourceBadge" class="badge"></span>
+            <span id="actionsFallbackReason" style="font-size: 0.8rem; color: var(--text-muted);"></span>
+          </div>
         </div>
         <div id="actionsListContainer"></div>
       </div>
@@ -184,6 +187,15 @@
       const sourceBadge = document.getElementById('actionsSourceBadge');
       sourceBadge.textContent = audit.actions.source.toUpperCase();
       sourceBadge.className = 'badge ' + (audit.actions.source === 'llm' ? 'badge-llm' : 'badge-fallback');
+
+      const fallbackReasonEl = document.getElementById('actionsFallbackReason');
+      if (audit.actions.fallback_reason) {
+        fallbackReasonEl.textContent = `(${audit.actions.fallback_reason})`;
+        fallbackReasonEl.style.display = 'inline';
+      } else {
+        fallbackReasonEl.textContent = '';
+        fallbackReasonEl.style.display = 'none';
+      }
 
       const actionsContainer = document.getElementById('actionsListContainer');
       actionsContainer.replaceChildren();
@@ -384,6 +396,13 @@
             });
             table.appendChild(tbody);
           } else if (m.id === 'ai_crawler_access') {
+            const h4 = document.createElement('h4');
+            h4.textContent = 'Blocked crawlers';
+            h4.style.fontSize = '0.9rem';
+            h4.style.fontWeight = '600';
+            h4.style.margin = '0.5rem 0 0.25rem 0';
+            det.appendChild(h4);
+
             ['User Agent', 'Allowed Status', 'Notes'].forEach(h => {
               const th = document.createElement('th');
               th.textContent = h;

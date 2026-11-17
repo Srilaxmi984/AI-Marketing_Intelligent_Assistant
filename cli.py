@@ -139,9 +139,8 @@ def print_summary(response: AuditResponse):
         print(f"    Summary: {m.summary}")
 
     print("-" * 70)
-    print(f"ACTION LIST FOR THIS WEEK (Source: {response.actions.source.upper()}):")
-    if response.actions.fallback_reason:
-        print(f" (Note: {response.actions.fallback_reason})")
+    fallback_note = f" (fallback: {response.actions.fallback_reason})" if response.actions.fallback_reason else ""
+    print(f"ACTION LIST FOR THIS WEEK (Source: {response.actions.source.upper()}{fallback_note}):")
     for item in response.actions.items:
         print(f" [#{item.priority}] {item.title} ({item.metric_id})")
         print(f"      Recommendation: {item.recommendation}")
