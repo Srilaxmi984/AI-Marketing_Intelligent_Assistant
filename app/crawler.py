@@ -133,12 +133,21 @@ class Crawler:
 
         result = CrawlResult()
 
+        async def validate_outgoing_request(request: httpx.Request) -> None:
+            # DECISION: Validate every outgoing request, including each redirect hop, BEFORE it is sent.
+            # Checking hops only after the response arrives would still let a redirect to an internal
+            # address be fetched (SSRF); raising here aborts the request instead.
+            validate_url_security(
+                str(request.url), allow_private=self.allow_private, dns_resolver=self.dns_resolver
+            )
+
         async with httpx.AsyncClient(
             transport=self.transport,
             timeout=timeout,
             headers={"User-Agent": settings.user_agent},
             follow_redirects=True,
             max_redirects=settings.max_redirects,
+            event_hooks={"request": [validate_outgoing_request]},
         ) as client:
             # 1. Fetch robots.txt and llms.txt
             robots_parser, robots_status = await fetch_robots_txt(
@@ -158,9 +167,9 @@ class Crawler:
             discovered: Set[str] = {normalized_start}
             fetched_urls: Set[str] = set()
 
-            # BFS crawl loop
-            semaphore = asyncio.Semaphore(settings.crawl_concurrency)
-
+            # BFS crawl loop.
+            # DECISION: Pages are fetched one at a time. This keeps request volume against the target
+            # polite and makes document-order queueing deterministic.
             while queue and len(result.pages) < self.max_pages:
                 # Check crawl budget
                 if time.monotonic() - start_time >= self.time_budget_s:
@@ -180,87 +189,93 @@ class Crawler:
 
                 fetched_urls.add(current_url)
 
-                async with semaphore:
-                    try:
+                try:
+                    validate_url_security(
+                        current_url, allow_private=self.allow_private, dns_resolver=self.dns_resolver
+                    )
+                    # Fetch page
+                    resp = await client.get(current_url)
+
+                    # Validate redirect hops for SSRF and offsite redirects
+                    final_url = str(resp.url)
+                    for hop in resp.history:
                         validate_url_security(
-                            current_url, allow_private=self.allow_private, dns_resolver=self.dns_resolver
+                            str(hop.url), allow_private=self.allow_private, dns_resolver=self.dns_resolver
                         )
-                        # Fetch page
-                        resp = await client.get(current_url)
+                    validate_url_security(
+                        final_url, allow_private=self.allow_private, dns_resolver=self.dns_resolver
+                    )
 
-                        # Validate redirect hops for SSRF and offsite redirects
-                        final_url = str(resp.url)
-                        for hop in resp.history:
-                            validate_url_security(
-                                str(hop.url), allow_private=self.allow_private, dns_resolver=self.dns_resolver
-                            )
-                        validate_url_security(
-                            final_url, allow_private=self.allow_private, dns_resolver=self.dns_resolver
+                    # If start page redirected offsite, abort
+                    if current_url == normalized_start and not is_same_site(normalized_start, final_url):
+                        raise CrawlError(
+                            "REDIRECTED_OFFSITE",
+                            f"Start URL redirected to foreign site: {final_url}",
                         )
 
-                        # If start page redirected offsite, abort
-                        if current_url == normalized_start and not is_same_site(normalized_start, final_url):
-                            raise CrawlError(
-                                "REDIRECTED_OFFSITE",
-                                f"Start URL redirected to foreign site: {final_url}",
-                            )
-
-                        if resp.status_code >= 400:
-                            # DECISION: Non-2xx crawl responses are categorized as fetch errors and excluded from page metrics.
-                            result.errors.append({
-                                "url": current_url,
-                                "status_code": resp.status_code,
-                                "error": f"HTTP {resp.status_code}",
-                            })
-                            if current_url == normalized_start:
-                                raise CrawlError("UNREACHABLE_SITE", f"Start URL returned HTTP {resp.status_code}")
-                            continue
-
-                        content_type = resp.headers.get("content-type", "").lower()
-                        if current_url == normalized_start and "text/html" not in content_type:
-                            raise CrawlError("NOT_HTML", f"Start URL returned non-HTML content-type: {content_type}")
-
-                        if "text/html" not in content_type:
-                            continue
-
-                        # Check body size cap
-                        body_bytes = resp.content
-                        if len(body_bytes) > settings.max_body_bytes:
-                            # DECISION: Pages exceeding the 2 MB body cap are truncated to safeguard memory and audit performance.
-                            html_text = body_bytes[: settings.max_body_bytes].decode("utf-8", errors="replace")
-                        else:
-                            html_text = resp.text
-
-                        soup = BeautifulSoup(html_text, "lxml")
-                        links = extract_internal_links(soup, final_url)
-
-                        # Store fetched page
-                        header_dict = {k.lower(): v for k, v in resp.headers.items()}
-                        page = FetchedPage(
-                            url=current_url,
-                            final_url=normalize_url(final_url),
-                            status_code=resp.status_code,
-                            headers=header_dict,
-                            html=html_text,
-                            links=links,
-                            soup=soup,
-                        )
-                        result.pages.append(page)
-
-                        # DECISION: Queue discovered links in first-seen document order without sorting to honor source page structure.
-                        if depth + 1 <= settings.max_crawl_depth:
-                            for link in links:
-                                if link not in discovered:
-                                    discovered.add(link)
-                                    queue.append((link, depth + 1))
-
-                    except CrawlError:
-                        raise
-                    except Exception as exc:
-                        logger.warning(f"Error fetching {current_url}: {exc}")
-                        result.errors.append({"url": current_url, "error": str(exc)})
+                    if resp.status_code >= 400:
+                        # DECISION: Non-2xx crawl responses are categorized as fetch errors and excluded from page metrics.
+                        result.errors.append({
+                            "url": current_url,
+                            "status_code": resp.status_code,
+                            "error": f"HTTP {resp.status_code}",
+                        })
                         if current_url == normalized_start:
-                            raise CrawlError("UNREACHABLE_SITE", f"Failed to fetch start URL: {exc}")
+                            raise CrawlError("UNREACHABLE_SITE", f"Start URL returned HTTP {resp.status_code}")
+                        continue
+
+                    content_type = resp.headers.get("content-type", "").lower()
+                    if current_url == normalized_start and "text/html" not in content_type:
+                        raise CrawlError("NOT_HTML", f"Start URL returned non-HTML content-type: {content_type}")
+
+                    if "text/html" not in content_type:
+                        continue
+
+                    # Check body size cap
+                    body_bytes = resp.content
+                    if len(body_bytes) > settings.max_body_bytes:
+                        # DECISION: Pages exceeding the 2 MB body cap are truncated to safeguard memory and audit performance.
+                        html_text = body_bytes[: settings.max_body_bytes].decode("utf-8", errors="replace")
+                    else:
+                        html_text = resp.text
+
+                    soup = BeautifulSoup(html_text, "lxml")
+                    links = extract_internal_links(soup, final_url)
+
+                    # Store fetched page
+                    header_dict = {k.lower(): v for k, v in resp.headers.items()}
+                    page = FetchedPage(
+                        url=current_url,
+                        final_url=normalize_url(final_url),
+                        status_code=resp.status_code,
+                        headers=header_dict,
+                        html=html_text,
+                        links=links,
+                        soup=soup,
+                    )
+                    result.pages.append(page)
+
+                    # DECISION: Queue discovered links in first-seen document order without sorting to honor source page structure.
+                    if depth + 1 <= settings.max_crawl_depth:
+                        for link in links:
+                            if link not in discovered:
+                                discovered.add(link)
+                                queue.append((link, depth + 1))
+
+                except CrawlError:
+                    raise
+                except ValueError as exc:
+                    # Raised by the pre-request SSRF hook or validator (e.g. redirect to a private IP).
+                    logger.warning(f"Blocked or invalid request for {current_url}: {exc}")
+                    result.errors.append({"url": current_url, "error": str(exc)})
+                    if current_url == normalized_start:
+                        code = "BLOCKED_TARGET" if "BLOCKED_TARGET" in str(exc) else "UNREACHABLE_SITE"
+                        raise CrawlError(code, str(exc).split(": ", 1)[-1])
+                except Exception as exc:
+                    logger.warning(f"Error fetching {current_url}: {exc}")
+                    result.errors.append({"url": current_url, "error": str(exc)})
+                    if current_url == normalized_start:
+                        raise CrawlError("UNREACHABLE_SITE", f"Failed to fetch start URL: {exc}")
 
             result.pages_discovered = len(discovered)
             result.duration_s = round(time.monotonic() - start_time, 2)

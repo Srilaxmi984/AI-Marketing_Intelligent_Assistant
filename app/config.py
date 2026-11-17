@@ -14,7 +14,6 @@ class Settings(BaseSettings):
     default_max_pages: int = 25
     max_pages_cap: int = 100
     max_crawl_depth: int = 3
-    crawl_concurrency: int = 5
     connect_timeout_s: float = 5.0
     read_timeout_s: float = 10.0
     total_budget_s: float = 90.0
