@@ -112,9 +112,9 @@ The response records `total_duration_s` and the per-stage breakdown in `stage_du
 
 Start the local server using uvicorn:
 ```bash
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-Open `http://127.0.0.1:8000/` in your browser to access the static web dashboard.
+Open `http://127.0.0.1:8000/` in your browser to access the static web dashboard. Using `python -m uvicorn` avoids relying on the standalone `uvicorn` command being on PATH. For the 2–5 minute screen-recording flow and narration, see [DEMO_SCRIPT.md](DEMO_SCRIPT.md).
 
 ### 2. Command-Line Interface (CLI)
 
