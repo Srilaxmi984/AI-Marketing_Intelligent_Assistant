@@ -34,7 +34,7 @@ def evaluate_title_meta(pages: List[FetchedPage]) -> MetricResult:
     titles_seen = []
 
     for page in pages:
-        soup = BeautifulSoup(page.html, "lxml")
+        soup = page.get_soup()
         title, title_len = extract_title(soup)
         desc, desc_len, has_dup = extract_meta_description(soup)
 

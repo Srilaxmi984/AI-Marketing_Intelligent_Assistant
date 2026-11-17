@@ -32,7 +32,7 @@ def evaluate_indexability_canonical(pages: List[FetchedPage]) -> MetricResult:
     details = []
 
     for page in pages:
-        soup = BeautifulSoup(page.html, "lxml")
+        soup = page.get_soup()
         page_url = page.final_url or page.url
 
         is_indexable, directives_failing = check_indexability(soup, page.headers)

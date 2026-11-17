@@ -40,6 +40,12 @@ class FetchedPage:
     headers: Dict[str, str]
     html: str
     links: List[str] = field(default_factory=list)
+    soup: Optional[BeautifulSoup] = None
+
+    def get_soup(self) -> BeautifulSoup:
+        if self.soup is None:
+            self.soup = BeautifulSoup(self.html, "lxml")
+        return self.soup
 
 
 @dataclass
@@ -237,6 +243,7 @@ class Crawler:
                             headers=header_dict,
                             html=html_text,
                             links=links,
+                            soup=soup,
                         )
                         result.pages.append(page)
 

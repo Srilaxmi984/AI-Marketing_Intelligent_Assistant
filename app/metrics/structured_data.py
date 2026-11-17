@@ -34,7 +34,7 @@ def evaluate_structured_data(pages: List[FetchedPage]) -> MetricResult:
     all_types_seen = []
 
     for page in pages:
-        soup = BeautifulSoup(page.html, "lxml")
+        soup = page.get_soup()
         has_valid, types, errors = extract_structured_data(soup)
         all_types_seen.extend(types)
 
