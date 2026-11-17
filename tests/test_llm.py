@@ -455,3 +455,20 @@ def test_build_gemini_payload_includes_pass_rules_and_failure_reasons():
     assert "https://example.com/long-title" in permissible_urls
     assert "https://example.com/no-schema" in permissible_urls
 
+
+@pytest.mark.asyncio
+async def test_llm_total_budget_overrun_fallback(sample_metrics, monkeypatch):
+    """Verify that exceeding LLM_TOTAL_BUDGET_S falls back with fallback_reason naming the limit."""
+    import asyncio
+    monkeypatch.setattr(settings, "gemini_api_key", "fake_key_for_test")
+    monkeypatch.setattr(settings, "llm_total_budget_s", 0.05)
+
+    async def slow_handler(request: httpx.Request):
+        await asyncio.sleep(0.2)
+        return httpx.Response(200, json={"candidates": []})
+
+    actions = await generate_action_list(sample_metrics, transport=httpx.MockTransport(slow_handler))
+    assert actions.source == "fallback"
+    assert "LLM time limit of 0.05s exceeded" in actions.fallback_reason
+
+

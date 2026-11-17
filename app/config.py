@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3-flash-preview"
     llm_timeout_s: float = 10.0
+    llm_total_budget_s: float = 20.0
 
     @property
     def user_agent(self) -> str:

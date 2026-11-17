@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import httpx
@@ -35,8 +36,9 @@ async def call_gemini_rest(
     model: str,
     timeout_s: float,
     transport: Optional[httpx.AsyncBaseTransport] = None,
+    total_budget_s: Optional[float] = None,
 ) -> Dict[str, Any]:
-    """Call Google Gemini REST generateContent endpoint with retry on 429 and 503."""
+    """Call Google Gemini REST generateContent endpoint with retry on 429 and 503 within total budget."""
     url = GEMINI_ENDPOINT_TEMPLATE.format(model=model)
     headers = {
         "Content-Type": "application/json",
@@ -45,11 +47,21 @@ async def call_gemini_rest(
 
     retries = 2
     delay = 0.5
+    start_time = time.monotonic()
+    budget = total_budget_s if total_budget_s is not None else settings.llm_total_budget_s
 
     async with httpx.AsyncClient(transport=transport, timeout=timeout_s) as client:
         for attempt in range(retries + 1):
+            elapsed = time.monotonic() - start_time
+            remaining = budget - elapsed
+            if remaining <= 0:
+                raise TimeoutError(f"LLM time limit of {budget}s exceeded across retries")
+
+            req_timeout = min(timeout_s, remaining)
             try:
-                resp = await client.post(url, headers=headers, json=payload)
+                resp = await client.post(url, headers=headers, json=payload, timeout=req_timeout)
+                if (time.monotonic() - start_time) >= budget:
+                    raise TimeoutError(f"LLM time limit of {budget}s exceeded across retries")
                 if resp.status_code in (429, 503) and attempt < retries:
                     # DECISION: Gemini REST rate-limits (429/503) are retried twice with backoff before gracefully reverting to fallback actions.
                     err_msg = ""
@@ -66,15 +78,25 @@ async def call_gemini_rest(
                         retries + 1,
                         err_msg,
                     )
-                    await asyncio.sleep(delay)
+                    sleep_time = min(delay, max(0.0, budget - (time.monotonic() - start_time)))
+                    if sleep_time <= 0 and (time.monotonic() - start_time) >= budget:
+                        raise TimeoutError(f"LLM time limit of {budget}s exceeded across retries")
+                    await asyncio.sleep(sleep_time)
                     delay *= 2.0
                     continue
                 resp.raise_for_status()
                 return resp.json()
+            except httpx.TimeoutException:
+                if (time.monotonic() - start_time) >= budget:
+                    raise TimeoutError(f"LLM time limit of {budget}s exceeded across retries")
+                if attempt == retries:
+                    raise
             except httpx.HTTPStatusError as exc:
                 if attempt == retries:
                     raise exc
             except Exception as exc:
+                if isinstance(exc, TimeoutError):
+                    raise exc
                 if attempt == retries:
                     raise exc
 
@@ -290,6 +312,9 @@ async def generate_action_list(
         return generate_fallback_actions(
             ranked_issues, reason=reason, model=None
         )
+    except TimeoutError as exc:
+        logger.warning(f"Gemini LLM budget exceeded: {exc}")
+        return generate_fallback_actions(ranked_issues, reason=str(exc), model=None)
     except Exception as exc:
         logger.warning(f"Gemini LLM call failed, reverting to fallback: {exc}")
         return generate_fallback_actions(ranked_issues, reason=f"LLM call exception: {exc}", model=None)
