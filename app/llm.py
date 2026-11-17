@@ -52,6 +52,20 @@ async def call_gemini_rest(
                 resp = await client.post(url, headers=headers, json=payload)
                 if resp.status_code in (429, 503) and attempt < retries:
                     # DECISION: Gemini REST rate-limits (429/503) are retried twice with backoff before gracefully reverting to fallback actions.
+                    err_msg = ""
+                    try:
+                        err_body = resp.json()
+                        if isinstance(err_body, dict):
+                            err_msg = err_body.get("error", {}).get("message", "")
+                    except Exception:
+                        pass
+                    logger.warning(
+                        "Gemini API returned HTTP %s (attempt %d/%d): %s",
+                        resp.status_code,
+                        attempt + 1,
+                        retries + 1,
+                        err_msg,
+                    )
                     await asyncio.sleep(delay)
                     delay *= 2.0
                     continue
@@ -255,9 +269,26 @@ async def generate_action_list(
 
     except httpx.HTTPStatusError as exc:
         status_code = exc.response.status_code
-        logger.warning(f"Gemini API returned HTTP {status_code}: {exc}")
+        err_msg = ""
+        try:
+            err_body = exc.response.json()
+            if isinstance(err_body, dict):
+                err_msg = err_body.get("error", {}).get("message", "")
+        except Exception:
+            pass
+        if not err_msg:
+            err_msg = exc.response.text[:200]
+
+        logger.warning(
+            "Gemini API returned HTTP %s: %s",
+            status_code,
+            err_msg,
+        )
+        reason = f"Gemini API returned HTTP {status_code}"
+        if err_msg:
+            reason += f": {err_msg}"
         return generate_fallback_actions(
-            ranked_issues, reason=f"Gemini API returned HTTP {status_code}", model=None
+            ranked_issues, reason=reason, model=None
         )
     except Exception as exc:
         logger.warning(f"Gemini LLM call failed, reverting to fallback: {exc}")

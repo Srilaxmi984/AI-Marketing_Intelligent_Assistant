@@ -214,6 +214,30 @@ async def test_llm_api_404_falls_back_naming_status_code(sample_metrics):
 
 
 @pytest.mark.asyncio
+async def test_llm_api_429_falls_back_with_status_and_message(sample_metrics):
+    """Verify HTTP 429 API error logs and includes status code and message in fallback_reason."""
+    orig_key = settings.gemini_api_key
+    try:
+        settings.gemini_api_key = "fake_key_for_mock"
+
+        def handler(request: httpx.Request):
+            return httpx.Response(
+                429,
+                json={"error": {"code": 429, "message": "Resource has been exhausted (e.g. check quota)."}},
+            )
+
+        transport = httpx.MockTransport(handler)
+        actions = await generate_action_list(sample_metrics, transport=transport)
+
+        assert actions.source == "fallback"
+        assert actions.model is None
+        assert "429" in actions.fallback_reason
+        assert "Resource has been exhausted" in actions.fallback_reason
+    finally:
+        settings.gemini_api_key = orig_key
+
+
+@pytest.mark.asyncio
 async def test_llm_disallowed_schema_type_rejected(sample_metrics):
     """Verify action item recommending a Schema.org type outside the allowed list is rejected and triggers fallback."""
     orig_key = settings.gemini_api_key
