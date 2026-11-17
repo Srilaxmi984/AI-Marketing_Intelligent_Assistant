@@ -250,6 +250,80 @@ async def test_llm_disallowed_schema_type_rejected(sample_metrics):
 
 
 @pytest.mark.asyncio
+async def test_llm_rejects_jobposting_schema_type(sample_metrics):
+    """Verify recommendation naming JobPosting (case-insensitively) is rejected with fallback and clear reason."""
+    orig_key = settings.gemini_api_key
+    try:
+        settings.gemini_api_key = "fake_key_for_mock"
+
+        items = [
+            {
+                "priority": 1,
+                "metric_id": "structured_data",
+                "title": "Enhance Careers Schema",
+                "recommendation": "Deploy jobposting structured data on all open recruitment listings.",
+                "impact": "Increases job applicant visibility.",
+                "affected_urls": ["https://example.com/bad-noindex"],
+            }
+        ]
+
+        def handler(request: httpx.Request):
+            body = {
+                "candidates": [
+                    {"content": {"parts": [{"text": json.dumps(items)}]}}
+                ]
+            }
+            return httpx.Response(200, json=body)
+
+        transport = httpx.MockTransport(handler)
+        actions = await generate_action_list(sample_metrics, transport=transport)
+
+        assert actions.source == "fallback"
+        assert actions.model is None
+        assert "unlisted Schema.org type" in actions.fallback_reason
+        assert "jobposting" in actions.fallback_reason.lower()
+    finally:
+        settings.gemini_api_key = orig_key
+
+
+@pytest.mark.asyncio
+async def test_llm_rejects_casestudy_schema_type(sample_metrics):
+    """Verify recommendation naming CaseStudy (case-insensitively) is rejected with fallback and clear reason."""
+    orig_key = settings.gemini_api_key
+    try:
+        settings.gemini_api_key = "fake_key_for_mock"
+
+        items = [
+            {
+                "priority": 1,
+                "metric_id": "structured_data",
+                "title": "Add Client Success Stories Schema",
+                "recommendation": "Implement CaseStudy markup across customer testimonial pages.",
+                "impact": "Improves organic search snippet presentation.",
+                "affected_urls": ["https://example.com/bad-noindex"],
+            }
+        ]
+
+        def handler(request: httpx.Request):
+            body = {
+                "candidates": [
+                    {"content": {"parts": [{"text": json.dumps(items)}]}}
+                ]
+            }
+            return httpx.Response(200, json=body)
+
+        transport = httpx.MockTransport(handler)
+        actions = await generate_action_list(sample_metrics, transport=transport)
+
+        assert actions.source == "fallback"
+        assert actions.model is None
+        assert "unlisted Schema.org type" in actions.fallback_reason
+        assert "casestudy" in actions.fallback_reason.lower()
+    finally:
+        settings.gemini_api_key = orig_key
+
+
+@pytest.mark.asyncio
 async def test_llm_allowed_schema_type_accepted(sample_metrics):
     """Verify action item using allowed Schema.org types is accepted."""
     orig_key = settings.gemini_api_key

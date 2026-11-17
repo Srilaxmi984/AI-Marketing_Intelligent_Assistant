@@ -198,24 +198,25 @@ async def generate_action_list(
                     ranked_issues, reason=f"Unrecognized metric_id '{proposal.metric_id}' in LLM output", model=None
                 )
 
-            # Validate allowed Schema.org types
-            text_to_check = f"{proposal.title} {proposal.recommendation}"
-            pascal_words = re.findall(r"\b[A-Z][a-zA-Z0-9]+(?:[A-Z][a-z0-9]+)+\b", text_to_check)
-            tokens = re.findall(r"\b[A-Za-z]+\b", text_to_check)
+            # Validate allowed Schema.org types case-insensitively against recommendation text
+            rec_text = f"{proposal.title} {proposal.recommendation}"
+            for disallowed in disallowed_known_types:
+                if disallowed not in allowed_schema_types_lower:
+                    pattern = rf"\b{re.escape(disallowed)}\b"
+                    if re.search(pattern, rec_text, re.IGNORECASE):
+                        return generate_fallback_actions(
+                            ranked_issues,
+                            reason=f"Recommendation names unlisted Schema.org type '{disallowed}' (allowed: {', '.join(settings.allowed_schema_types)})",
+                            model=None,
+                        )
 
+            # Also check any PascalCase word that could represent an unlisted Schema.org type
+            pascal_words = re.findall(r"\b[A-Z][a-zA-Z0-9]+(?:[A-Z][a-z0-9]+)+\b", rec_text)
             for w in pascal_words:
                 if w.lower() not in {"schema", "jsonld", "google", "hubspot", "html", "javascript"} and w.lower() not in allowed_schema_types_lower:
                     return generate_fallback_actions(
                         ranked_issues,
-                        reason=f"LLM proposed unlisted Schema.org type '{w}' (allowed: {', '.join(settings.allowed_schema_types)})",
-                        model=None,
-                    )
-
-            for t in tokens:
-                if t.lower() in disallowed_known_types and t.lower() not in allowed_schema_types_lower:
-                    return generate_fallback_actions(
-                        ranked_issues,
-                        reason=f"LLM proposed unlisted Schema.org type '{t}' (allowed: {', '.join(settings.allowed_schema_types)})",
+                        reason=f"Recommendation names unlisted Schema.org type '{w}' (allowed: {', '.join(settings.allowed_schema_types)})",
                         model=None,
                     )
 
