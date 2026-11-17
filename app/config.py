@@ -23,6 +23,22 @@ class Settings(BaseSettings):
     max_body_bytes: int = 2 * 1024 * 1024  # 2 MB limit
     max_redirects: int = 5
 
+    # Content metric guidelines
+    title_min_chars: int = 30
+    title_max_chars: int = 60
+    meta_min_chars: int = 70
+    meta_max_chars: int = 160
+    allowed_schema_types: List[str] = [
+        "Organization",
+        "WebSite",
+        "WebPage",
+        "Article",
+        "BreadcrumbList",
+        "FAQPage",
+        "Product",
+        "SoftwareApplication",
+    ]
+
     # Link checker settings
     max_link_checks: int = 300
     link_check_concurrency: int = 5

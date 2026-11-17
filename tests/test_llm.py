@@ -191,3 +191,149 @@ async def test_prompt_injection_does_not_alter_metrics(sample_metrics):
     _ = await generate_action_list(sample_metrics)
     after_scores = [m.score for m in sample_metrics]
     assert orig_scores == after_scores
+
+
+@pytest.mark.asyncio
+async def test_llm_disallowed_schema_type_rejected(sample_metrics):
+    """Verify action item recommending a Schema.org type outside the allowed list is rejected and triggers fallback."""
+    orig_key = settings.gemini_api_key
+    try:
+        settings.gemini_api_key = "fake_key_for_mock"
+
+        invalid_items = [
+            {
+                "priority": 1,
+                "metric_id": "structured_data",
+                "title": "Add CaseStudy and JobPosting Schema",
+                "recommendation": "Deploy JobPosting for careers and CaseStudy for case studies.",
+                "impact": "Rich snippets.",
+                "affected_urls": ["https://example.com/bad-noindex"],
+            }
+        ]
+
+        def handler(request: httpx.Request):
+            body = {
+                "candidates": [
+                    {"content": {"parts": [{"text": json.dumps(invalid_items)}]}}
+                ]
+            }
+            return httpx.Response(200, json=body)
+
+        transport = httpx.MockTransport(handler)
+        actions = await generate_action_list(sample_metrics, transport=transport)
+
+        assert actions.source == "fallback"
+        assert actions.model is None
+        assert "unlisted Schema.org type" in actions.fallback_reason
+    finally:
+        settings.gemini_api_key = orig_key
+
+
+@pytest.mark.asyncio
+async def test_llm_allowed_schema_type_accepted(sample_metrics):
+    """Verify action item using allowed Schema.org types is accepted."""
+    orig_key = settings.gemini_api_key
+    try:
+        settings.gemini_api_key = "fake_key_for_mock"
+
+        valid_items = [
+            {
+                "priority": 1,
+                "metric_id": "structured_data",
+                "title": "Implement Organization and Article Schema",
+                "recommendation": "Deploy Organization on homepage and Article on content pages.",
+                "impact": "Rich search snippets.",
+                "affected_urls": ["https://example.com/bad-noindex"],
+            }
+        ]
+
+        def handler(request: httpx.Request):
+            body = {
+                "candidates": [
+                    {"content": {"parts": [{"text": json.dumps(valid_items)}]}}
+                ]
+            }
+            return httpx.Response(200, json=body)
+
+        transport = httpx.MockTransport(handler)
+        actions = await generate_action_list(sample_metrics, transport=transport)
+
+        assert actions.source == "llm"
+        assert actions.model == settings.gemini_model
+        assert actions.fallback_reason is None
+        assert len(actions.items) == 1
+    finally:
+        settings.gemini_api_key = orig_key
+
+
+def test_build_gemini_payload_includes_pass_rules_and_failure_reasons():
+    """Verify payload construction injects pass rules from config and per-URL failure reasons."""
+    from app.actions import collect_ranked_issues
+    from app.llm import build_gemini_payload
+
+    metrics = [
+        MetricResult(
+            id="title_meta",
+            name="Title and Meta Description",
+            mandatory=True,
+            why_it_matters="",
+            how_measured="",
+            pass_rule="",
+            status="fail",
+            score=25.0,
+            summary="",
+            passed=1,
+            total=4,
+            details=[
+                {
+                    "url": "https://example.com/long-title",
+                    "title_length": 68,
+                    "title_passed": False,
+                    "meta_description_length": 207,
+                    "meta_description_passed": False,
+                    "passed": False,
+                },
+                {
+                    "url": "https://example.com/short-desc",
+                    "title_length": 45,
+                    "title_passed": True,
+                    "meta_description_length": 30,
+                    "meta_description_passed": False,
+                    "passed": False,
+                },
+            ],
+        ),
+        MetricResult(
+            id="structured_data",
+            name="Structured Data",
+            mandatory=False,
+            why_it_matters="",
+            how_measured="",
+            pass_rule="",
+            status="fail",
+            score=0.0,
+            summary="",
+            passed=0,
+            total=1,
+            details=[
+                {
+                    "url": "https://example.com/no-schema",
+                    "has_jsonld": False,
+                    "passed": False,
+                }
+            ],
+        ),
+    ]
+
+    ranked = collect_ranked_issues(metrics)
+    payload, permissible_urls = build_gemini_payload(ranked)
+
+    prompt = payload["contents"][0]["parts"][0]["text"]
+    assert "Title tag must be 30-60 chars" in prompt
+    assert "title 68 chars, over 60" in prompt
+    assert "meta 207 chars, over 160" in prompt
+    assert "meta 30 chars, under 70" in prompt
+    assert "no JSON-LD found" in prompt
+    assert "https://example.com/long-title" in permissible_urls
+    assert "https://example.com/no-schema" in permissible_urls
+
