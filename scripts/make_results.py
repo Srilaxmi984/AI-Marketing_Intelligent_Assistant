@@ -59,7 +59,7 @@ def build_audit_markdown(data: dict) -> str:
         f"- **Max Pages Cap**: {crawl.get('max_pages', 0)}",
         f"- **Total Duration**: {data.get('total_duration_s', crawl.get('duration_s', 0.0))} seconds",
         f"- **Stage Durations**: Crawl: {data.get('stage_durations', {}).get('crawl', crawl.get('duration_s', 0.0))}s, Link Checks: {data.get('stage_durations', {}).get('link_checks', 0.0)}s, LLM: {data.get('stage_durations', {}).get('llm', 0.0)}s",
-        f"- **Time Budget Scope**: Request deadline of 90s total (max 40s crawl budget, remaining time for link checks, dedicated LLM timeout)",
+        f"- **Time Budget Scope**: Request deadline of 90s total (max 40s crawl budget, remaining time for link checks, dedicated 10s LLM timeout)",
         f"- **Time Budget Truncated**: {crawl.get('truncated', False)}"
         + (f" ({crawl.get('truncated_reason')})" if crawl.get("truncated_reason") else ""),
         "",
