@@ -194,6 +194,26 @@ async def test_prompt_injection_does_not_alter_metrics(sample_metrics):
 
 
 @pytest.mark.asyncio
+async def test_llm_api_404_falls_back_naming_status_code(sample_metrics):
+    """Verify HTTP 404 API error does not model-swap, falls back to templates naming HTTP 404, with model set to null."""
+    orig_key = settings.gemini_api_key
+    try:
+        settings.gemini_api_key = "fake_key_for_mock"
+
+        def handler(request: httpx.Request):
+            return httpx.Response(404, text="Model Not Found")
+
+        transport = httpx.MockTransport(handler)
+        actions = await generate_action_list(sample_metrics, transport=transport)
+
+        assert actions.source == "fallback"
+        assert actions.model is None
+        assert "404" in actions.fallback_reason
+    finally:
+        settings.gemini_api_key = orig_key
+
+
+@pytest.mark.asyncio
 async def test_llm_disallowed_schema_type_rejected(sample_metrics):
     """Verify action item recommending a Schema.org type outside the allowed list is rejected and triggers fallback."""
     orig_key = settings.gemini_api_key

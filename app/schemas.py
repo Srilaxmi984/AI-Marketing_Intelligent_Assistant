@@ -62,6 +62,7 @@ class ActionItem(BaseModel):
 
 class ActionsResult(BaseModel):
     source: str  # "llm" | "fallback"
+    model: Optional[str] = None
     fallback_reason: Optional[str] = None
     items: List[ActionItem] = Field(default_factory=list)
 
