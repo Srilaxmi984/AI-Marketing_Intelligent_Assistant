@@ -52,6 +52,26 @@ class TestTitleMetaMetric:
         assert res.total == 1
         assert (res.passed == 1) == expected_pass
 
+    def test_metrics_deduplicate_empty_path_and_slash(self):
+        page1 = FetchedPage(
+            url="https://example.com",
+            final_url="https://example.com",
+            status_code=200,
+            headers={},
+            html="<html><head><title>Passing Title Between 30 and 60 chars long</title><meta name='description' content='Passing description that is comfortably between seventy and one hundred sixty characters long.'></head></html>",
+        )
+        page2 = FetchedPage(
+            url="https://example.com/",
+            final_url="https://example.com/",
+            status_code=200,
+            headers={},
+            html="<html><head><title>Passing Title Between 30 and 60 chars long</title><meta name='description' content='Passing description that is comfortably between seventy and one hundred sixty characters long.'></head></html>",
+        )
+        res = evaluate_title_meta([page1, page2])
+        # Two pages with equivalent root URLs must deduplicate to 1 total page in metrics
+        assert res.total == 1
+        assert res.passed == 1
+
 
 class TestBrokenLinksMetric:
     """Testing broken links scoring and zero link handling."""

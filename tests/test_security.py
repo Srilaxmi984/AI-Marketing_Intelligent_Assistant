@@ -92,6 +92,17 @@ class TestUrlNormalization:
         assert normalize_url("https://example.com/dir/") == "https://example.com/dir/"
         assert normalize_url("https://example.com/dir") == "https://example.com/dir"
 
+    def test_normalize_empty_path_and_slash_equivalent(self):
+        # Empty path and "/" must normalize to the exact same URL
+        assert normalize_url("https://example.com") == normalize_url("https://example.com/")
+        assert normalize_url("https://example.com") == "https://example.com"
+        assert normalize_url("http://example.com:80/") == "http://example.com"
+        assert normalize_url("https://example.com/?q=1") == normalize_url("https://example.com?q=1")
+        # Non-root trailing slashes must still be preserved
+        assert normalize_url("https://example.com/about/") != normalize_url("https://example.com/about")
+        assert normalize_url("https://example.com/about/") == "https://example.com/about/"
+        assert normalize_url("https://example.com/about") == "https://example.com/about"
+
     def test_is_same_site(self):
         assert is_same_site("https://www.hubspot.com/blog", "https://hubspot.com/pricing")
         assert is_same_site("http://example.com", "https://www.example.com/path")

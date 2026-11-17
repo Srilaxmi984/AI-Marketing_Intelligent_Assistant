@@ -88,8 +88,13 @@ def normalize_url(url: str) -> str:
     else:
         netloc = hostname
 
+    # DECISION: Treat empty path and "/" as the same URL while preserving trailing slashes on all other paths.
+    path = parsed.path
+    if path == "/":
+        path = ""
+
     # Keep query, drop fragment
-    normalized = urlunparse((scheme, netloc, parsed.path, parsed.params, parsed.query, ""))
+    normalized = urlunparse((scheme, netloc, path, parsed.params, parsed.query, ""))
     return normalized
 
 

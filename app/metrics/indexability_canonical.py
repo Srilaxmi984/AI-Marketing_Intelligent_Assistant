@@ -7,11 +7,21 @@ from app.config import settings
 from app.crawler import FetchedPage
 from app.parsing import check_indexability, extract_canonical
 from app.schemas import MetricResult
+from app.security import normalize_url
 
 
 def evaluate_indexability_canonical(pages: List[FetchedPage]) -> MetricResult:
     """Evaluate indexability directives and canonical tag consistency across pages."""
-    total = len(pages)
+    # Deduplicate pages by normalized URL
+    seen_urls = set()
+    deduped_pages: List[FetchedPage] = []
+    for page in pages:
+        p_url = normalize_url(page.final_url or page.url)
+        if p_url not in seen_urls:
+            seen_urls.add(p_url)
+            deduped_pages.append(page)
+
+    total = len(deduped_pages)
     if total == 0:
         return MetricResult(
             id="indexability_canonical",
@@ -31,7 +41,7 @@ def evaluate_indexability_canonical(pages: List[FetchedPage]) -> MetricResult:
     passed_count = 0
     details = []
 
-    for page in pages:
+    for page in deduped_pages:
         soup = page.get_soup()
         page_url = page.final_url or page.url
 

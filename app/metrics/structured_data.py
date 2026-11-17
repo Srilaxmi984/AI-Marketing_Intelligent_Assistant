@@ -8,11 +8,21 @@ from app.config import settings
 from app.crawler import FetchedPage
 from app.parsing import extract_structured_data
 from app.schemas import MetricResult
+from app.security import normalize_url
 
 
 def evaluate_structured_data(pages: List[FetchedPage]) -> MetricResult:
     """Evaluate JSON-LD schema markup presence and valid types across crawled pages."""
-    total = len(pages)
+    # Deduplicate pages by normalized URL
+    seen_urls = set()
+    deduped_pages: List[FetchedPage] = []
+    for page in pages:
+        p_url = normalize_url(page.final_url or page.url)
+        if p_url not in seen_urls:
+            seen_urls.add(p_url)
+            deduped_pages.append(page)
+
+    total = len(deduped_pages)
     if total == 0:
         return MetricResult(
             id="structured_data",
@@ -33,7 +43,7 @@ def evaluate_structured_data(pages: List[FetchedPage]) -> MetricResult:
     details = []
     all_types_seen = []
 
-    for page in pages:
+    for page in deduped_pages:
         soup = page.get_soup()
         has_valid, types, errors = extract_structured_data(soup)
         all_types_seen.extend(types)

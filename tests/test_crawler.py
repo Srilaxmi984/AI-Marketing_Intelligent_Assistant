@@ -213,3 +213,31 @@ async def test_crawler_document_order_queueing():
         "https://example.com/apple",
         "https://example.com/mango",
     ]
+
+
+@pytest.mark.asyncio
+async def test_crawler_deduplicates_empty_path_and_slash():
+    """Verify that empty path and slash are deduplicated in the crawl queue."""
+    def handler(request: httpx.Request):
+        url = str(request.url)
+        if url.endswith("/robots.txt") or url.endswith("/llms.txt"):
+            return httpx.Response(404)
+        if url in ("https://example.com", "https://example.com/"):
+            html = """
+            <html>
+              <body>
+                <a href="https://example.com">Home No Slash</a>
+                <a href="https://example.com/">Home Slash</a>
+                <a href="/about">About</a>
+              </body>
+            </html>
+            """
+            return httpx.Response(200, text=html, headers={"Content-Type": "text/html"})
+        return httpx.Response(200, text=f"<html><body>Page {url}</body></html>", headers={"Content-Type": "text/html"})
+
+    crawler = Crawler(max_pages=5, allow_private=True, transport=httpx.MockTransport(handler))
+    result = await crawler.crawl("https://example.com")
+    crawled_urls = [p.url for p in result.pages]
+
+    # Home must be crawled only once, followed by about
+    assert crawled_urls == ["https://example.com", "https://example.com/about"]
