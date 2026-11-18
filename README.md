@@ -362,3 +362,9 @@ Audit scores reflect the sample of pages crawled and should be interpreted as an
 | 3. Indexability (`indexability_canonical`) | 100.0% (3/3) | 100.0% (10/10) | 100.0% (25/25) | 100.0% (25/25) |
 | 4. AI Crawler Access (`ai_crawler_access`) | 100.0% (6/6) | 100.0% (6/6) | 100.0% (6/6) | 100.0% (6/6) |
 | 5. Structured Data (`structured_data`) | 100.0% (3/3) | 30.0% (3/10) | 44.0% (11/25) | 84.0% (21/25) |
+
+## Demo Video
+
+
+https://github.com/user-attachments/assets/d15414c1-2010-43bd-a42c-ae1b8f5e3f32
+
